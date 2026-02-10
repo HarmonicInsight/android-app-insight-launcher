@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <!-- Simple "I" letter icon for Insight -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M48,28 L60,28 L60,80 L48,80 Z" />
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M42,28 L66,28 L66,36 L42,36 Z" />
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M42,72 L66,72 L66,80 L42,80 Z" />
+</vector>

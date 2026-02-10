@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Insight Launcher</string>
+
+    <!-- Home -->
+    <string name="search_hint">アプリを検索…</string>
+
+    <!-- Drawer -->
+    <string name="toggle_view_mode">表示切替</string>
+    <string name="change_category">カテゴリを変更</string>
+    <string name="app_info">アプリ情報</string>
+    <string name="uninstall">アンインストール</string>
+
+    <!-- Search -->
+    <string name="back">戻る</string>
+    <string name="recent_apps">最近使ったアプリ</string>
+
+    <!-- Onboarding -->
+    <string name="onboarding_title">アプリを自動分類しました</string>
+    <string name="onboarding_message">Insight Launcher がインストール済みのアプリを自動でカテゴリ分類しました。ホーム画面を上スワイプしてカテゴリ別一覧を確認できます。</string>
+    <string name="onboarding_ok">OK</string>
+
+    <!-- Settings -->
+    <string name="settings">設定</string>
+    <string name="settings_display">表示</string>
+    <string name="settings_drawer_view">ドロワー表示形式</string>
+    <string name="settings_view_list">リスト</string>
+    <string name="settings_view_grid">グリッド</string>
+    <string name="settings_icon_size">アイコンサイズ</string>
+    <string name="settings_icon_small">小</string>
+    <string name="settings_icon_medium">中</string>
+    <string name="settings_icon_large">大</string>
+    <string name="settings_category">カテゴリ管理</string>
+    <string name="settings_reclassify">自動分類をやり直す</string>
+    <string name="settings_reclassify_description">すべてのアプリを再分類します（手動変更はリセットされません）</string>
+    <string name="settings_app_info">アプリ情報</string>
+    <string name="settings_version">バージョン</string>
+    <string name="settings_developer">開発者</string>
+    <string name="settings_set_default_launcher">デフォルトランチャーに設定</string>
+    <string name="settings_set_default_launcher_description">端末のホームアプリ設定を開きます</string>
+</resources>
