@@ -23,7 +23,8 @@ object AppModule {
             context,
             AppDatabase::class.java,
             "insight_launcher.db",
-        ).build()
+        ).fallbackToDestructiveMigration()
+            .build()
     }
 
     @Provides

@@ -1,7 +1,6 @@
 package com.harmonic.insight.launcher.ui.drawer
 
 import android.content.Context
-import android.content.pm.PackageManager
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.harmonic.insight.launcher.data.model.AppCategory
@@ -38,8 +37,6 @@ class AppDrawerViewModel @Inject constructor(
 
     private val _uiState = MutableStateFlow(AppDrawerUiState())
     val uiState: StateFlow<AppDrawerUiState> = _uiState.asStateFlow()
-
-    private val packageManager: PackageManager = context.packageManager
 
     init {
         viewModelScope.launch {
@@ -120,22 +117,7 @@ class AppDrawerViewModel @Inject constructor(
 
     private fun loadAppsForCategory(category: AppCategory) {
         viewModelScope.launch {
-            appRepository.getAppsByCategory(category).collect { entities ->
-                val apps = entities.mapNotNull { entity ->
-                    try {
-                        val icon = packageManager.getApplicationIcon(entity.packageName)
-                        AppInfo(
-                            packageName = entity.packageName,
-                            appName = entity.appName,
-                            icon = icon,
-                            category = entity.category,
-                            isUserCategorized = entity.isUserCategorized,
-                            lastUsedTimestamp = entity.lastUsedTimestamp,
-                        )
-                    } catch (_: PackageManager.NameNotFoundException) {
-                        null
-                    }
-                }
+            appRepository.getAppsByCategoryWithIcons(category).collect { apps ->
                 _uiState.value = _uiState.value.copy(apps = apps)
             }
         }
@@ -143,22 +125,7 @@ class AppDrawerViewModel @Inject constructor(
 
     private fun searchApps(query: String) {
         viewModelScope.launch {
-            appRepository.searchApps(query).collect { entities ->
-                val apps = entities.mapNotNull { entity ->
-                    try {
-                        val icon = packageManager.getApplicationIcon(entity.packageName)
-                        AppInfo(
-                            packageName = entity.packageName,
-                            appName = entity.appName,
-                            icon = icon,
-                            category = entity.category,
-                            isUserCategorized = entity.isUserCategorized,
-                            lastUsedTimestamp = entity.lastUsedTimestamp,
-                        )
-                    } catch (_: PackageManager.NameNotFoundException) {
-                        null
-                    }
-                }
+            appRepository.searchAppsWithIcons(query).collect { apps ->
                 _uiState.value = _uiState.value.copy(apps = apps)
             }
         }

@@ -108,16 +108,17 @@ class HomeViewModel @Inject constructor(
         }
     }
 
-    private fun loadAppInfo(packageName: String): AppInfo? {
+    private suspend fun loadAppInfo(packageName: String): AppInfo? {
         return try {
             val appInfo = packageManager.getApplicationInfo(packageName, 0)
             val appName = appInfo.loadLabel(packageManager).toString()
             val icon = packageManager.getApplicationIcon(packageName)
+            val category = appRepository.getAppCategory(packageName)
             AppInfo(
                 packageName = packageName,
                 appName = appName,
                 icon = icon,
-                category = com.harmonic.insight.launcher.data.model.AppCategory.OTHER,
+                category = category,
             )
         } catch (_: PackageManager.NameNotFoundException) {
             null

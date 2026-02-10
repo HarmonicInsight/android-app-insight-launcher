@@ -17,28 +17,27 @@ class PackageReceiver : BroadcastReceiver() {
     @Inject
     lateinit var appRepository: AppRepository
 
-    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
-
     override fun onReceive(context: Context, intent: Intent) {
         val packageName = intent.data?.schemeSpecificPart ?: return
+        val pendingResult = goAsync()
 
-        when (intent.action) {
-            Intent.ACTION_PACKAGE_ADDED -> {
-                scope.launch {
-                    appRepository.onPackageAdded(packageName)
-                }
-            }
-            Intent.ACTION_PACKAGE_REMOVED -> {
-                if (!intent.getBooleanExtra(Intent.EXTRA_REPLACING, false)) {
-                    scope.launch {
-                        appRepository.onPackageRemoved(packageName)
+        CoroutineScope(SupervisorJob() + Dispatchers.IO).launch {
+            try {
+                when (intent.action) {
+                    Intent.ACTION_PACKAGE_ADDED -> {
+                        appRepository.onPackageAdded(packageName)
+                    }
+                    Intent.ACTION_PACKAGE_REMOVED -> {
+                        if (!intent.getBooleanExtra(Intent.EXTRA_REPLACING, false)) {
+                            appRepository.onPackageRemoved(packageName)
+                        }
+                    }
+                    Intent.ACTION_PACKAGE_CHANGED -> {
+                        appRepository.onPackageAdded(packageName)
                     }
                 }
-            }
-            Intent.ACTION_PACKAGE_CHANGED -> {
-                scope.launch {
-                    appRepository.onPackageAdded(packageName)
-                }
+            } finally {
+                pendingResult.finish()
             }
         }
     }

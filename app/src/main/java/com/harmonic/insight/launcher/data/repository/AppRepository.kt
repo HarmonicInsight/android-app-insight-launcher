@@ -2,9 +2,7 @@ package com.harmonic.insight.launcher.data.repository
 
 import android.content.Context
 import android.content.Intent
-import android.content.pm.LauncherApps
 import android.content.pm.PackageManager
-import android.os.UserManager
 import com.harmonic.insight.launcher.data.local.AppDao
 import com.harmonic.insight.launcher.data.local.entity.AppEntity
 import com.harmonic.insight.launcher.data.model.AppCategory
@@ -45,6 +43,22 @@ class AppRepository @Inject constructor(
         return appDao.getAppsByCategory(category).map { entities ->
             entities.mapNotNull { entity -> entityToAppInfo(entity) }
         }
+    }
+
+    fun searchAppsWithIcons(query: String): Flow<List<AppInfo>> {
+        return appDao.searchApps(query).map { entities ->
+            entities.mapNotNull { entity -> entityToAppInfo(entity) }
+        }
+    }
+
+    fun getRecentAppsWithIcons(limit: Int = 5): Flow<List<AppInfo>> {
+        return appDao.getRecentApps(limit).map { entities ->
+            entities.mapNotNull { entity -> entityToAppInfo(entity) }
+        }
+    }
+
+    suspend fun getAppCategory(packageName: String): AppCategory {
+        return appDao.getApp(packageName)?.category ?: AppCategory.OTHER
     }
 
     suspend fun refreshInstalledApps() = withContext(Dispatchers.IO) {
