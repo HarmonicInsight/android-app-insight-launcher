@@ -52,20 +52,20 @@ class HomeViewModel @Inject constructor(
                 categoryRepository.getFavorites(),
                 categoryRepository.getDockApps(),
             ) { favorites, dock ->
+                Pair(favorites, dock)
+            }.collect { (favorites, dock) ->
                 val favoriteApps = favorites.mapNotNull { fav ->
                     loadAppInfo(fav.packageName)
                 }
                 val dockApps = dock.mapNotNull { d ->
                     loadAppInfo(d.packageName)
                 }
-                HomeUiState(
+                _uiState.value = HomeUiState(
                     favorites = favoriteApps,
                     dockApps = dockApps,
                     isLoading = false,
                     showOnboarding = _uiState.value.showOnboarding,
                 )
-            }.collect { state ->
-                _uiState.value = state
             }
         }
     }
