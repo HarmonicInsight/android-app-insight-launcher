@@ -1,6 +1,5 @@
 package com.harmonic.insight.launcher.ui.home
 
-import androidx.compose.foundation.gestures.detectVerticalDragGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -15,115 +14,85 @@ import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.rememberCoroutineScope
+import kotlinx.coroutines.launch
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.harmonic.insight.launcher.R
 import com.harmonic.insight.launcher.ui.components.AppIcon
+import com.harmonic.insight.launcher.ui.components.CategoryTabRow
 import com.harmonic.insight.launcher.ui.components.ClockWidget
 import com.harmonic.insight.launcher.ui.components.HomeSearchBar
 import com.harmonic.insight.launcher.ui.components.IconSize
 
 @Composable
 fun HomeScreen(
-    onOpenDrawer: () -> Unit,
     onOpenSearch: () -> Unit,
     viewModel: HomeViewModel = hiltViewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsState()
 
     Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .pointerInput(Unit) {
-                var totalDrag = 0f
-                var triggered = false
-                detectVerticalDragGestures(
-                    onDragStart = {
-                        totalDrag = 0f
-                        triggered = false
-                    },
-                    onVerticalDrag = { _, dragAmount ->
-                        totalDrag += dragAmount
-                        if (totalDrag < -100 && !triggered) {
-                            triggered = true
-                            onOpenDrawer()
-                        }
-                    },
-                )
-            },
+        modifier = Modifier.fillMaxSize(),
     ) {
         Column(
             modifier = Modifier
                 .fillMaxSize()
                 .statusBarsPadding()
-                .navigationBarsPadding()
-                .padding(vertical = 16.dp),
+                .navigationBarsPadding(),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
-            Spacer(modifier = Modifier.height(48.dp))
+            Spacer(modifier = Modifier.height(24.dp))
 
             // Clock widget
             ClockWidget(
                 textColor = Color.White,
             )
 
-            Spacer(modifier = Modifier.height(32.dp))
+            Spacer(modifier = Modifier.height(16.dp))
 
-            // Favorites grid (up to 8 apps, 4 columns)
-            if (uiState.favorites.isNotEmpty()) {
-                LazyVerticalGrid(
-                    columns = GridCells.Fixed(4),
-                    horizontalArrangement = Arrangement.SpaceEvenly,
-                    verticalArrangement = Arrangement.spacedBy(16.dp),
+            if (uiState.isLoading) {
+                Box(
+                    contentAlignment = Alignment.Center,
                     modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 24.dp),
+                        .weight(1f)
+                        .fillMaxWidth(),
                 ) {
-                    items(
-                        items = uiState.favorites.take(8),
-                        key = { it.packageName },
-                    ) { app ->
-                        AppIcon(
-                            appName = app.appName,
-                            icon = app.icon,
-                            iconSize = IconSize.MEDIUM,
-                            onClick = { viewModel.launchApp(app.packageName) },
-                        )
-                    }
+                    CircularProgressIndicator(color = Color.White)
                 }
-
-                Spacer(modifier = Modifier.height(24.dp))
+            } else if (uiState.categories.isNotEmpty()) {
+                // Category pages
+                CategoryPager(
+                    uiState = uiState,
+                    onLaunchApp = { viewModel.launchApp(it) },
+                    modifier = Modifier.weight(1f),
+                )
+            } else {
+                Spacer(modifier = Modifier.weight(1f))
             }
 
-            Spacer(modifier = Modifier.weight(1f))
-
-            // Swipe up hint
-            Text(
-                text = stringResource(R.string.swipe_up_hint),
-                style = MaterialTheme.typography.bodySmall,
-                color = Color.White.copy(alpha = 0.7f),
-            )
-
-            Spacer(modifier = Modifier.height(12.dp))
+            Spacer(modifier = Modifier.height(8.dp))
 
             // Search bar
             HomeSearchBar(
                 onClick = onOpenSearch,
             )
 
-            Spacer(modifier = Modifier.height(24.dp))
+            Spacer(modifier = Modifier.height(16.dp))
 
             // Dock (4 fixed apps)
             Row(
@@ -143,7 +112,7 @@ fun HomeScreen(
                 }
             }
 
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(12.dp))
         }
 
         // Onboarding dialog
@@ -168,6 +137,65 @@ fun HomeScreen(
                     }
                 },
             )
+        }
+    }
+}
+
+@Composable
+private fun CategoryPager(
+    uiState: HomeUiState,
+    onLaunchApp: (String) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val categories = uiState.categories
+    val pagerState = rememberPagerState(pageCount = { categories.size })
+    val coroutineScope = rememberCoroutineScope()
+
+    Column(modifier = modifier) {
+        // Category tabs - synced with pager
+        CategoryTabRow(
+            categories = categories,
+            selectedCategory = categories.getOrElse(pagerState.currentPage) { categories.first() },
+            onCategorySelected = { category ->
+                val index = categories.indexOf(category)
+                if (index >= 0) {
+                    coroutineScope.launch {
+                        pagerState.animateScrollToPage(index)
+                    }
+                }
+            },
+        )
+
+        // Horizontal pager - one page per category
+        HorizontalPager(
+            state = pagerState,
+            modifier = Modifier
+                .fillMaxWidth()
+                .weight(1f),
+        ) { page ->
+            val category = categories[page]
+            val apps = uiState.appsByCategory[category] ?: emptyList()
+
+            LazyVerticalGrid(
+                columns = GridCells.Fixed(4),
+                horizontalArrangement = Arrangement.SpaceEvenly,
+                verticalArrangement = Arrangement.spacedBy(16.dp),
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(horizontal = 16.dp, vertical = 8.dp),
+            ) {
+                items(
+                    items = apps,
+                    key = { it.packageName },
+                ) { app ->
+                    AppIcon(
+                        appName = app.appName,
+                        icon = app.icon,
+                        iconSize = IconSize.MEDIUM,
+                        onClick = { onLaunchApp(app.packageName) },
+                    )
+                }
+            }
         }
     }
 }

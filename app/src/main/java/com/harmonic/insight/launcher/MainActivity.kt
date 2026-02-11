@@ -105,7 +105,6 @@ fun InsightLauncherNavigation() {
                 },
             ) {
                 HomeScreen(
-                    onOpenDrawer = { navController.navigate(Routes.DRAWER) },
                     onOpenSearch = { navController.navigate(Routes.SEARCH) },
                 )
             }
