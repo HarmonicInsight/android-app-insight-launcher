@@ -47,11 +47,21 @@ fun HomeScreen(
         modifier = Modifier
             .fillMaxSize()
             .pointerInput(Unit) {
-                detectVerticalDragGestures { _, dragAmount ->
-                    if (dragAmount < -50) {
-                        onOpenDrawer()
-                    }
-                }
+                var totalDrag = 0f
+                var triggered = false
+                detectVerticalDragGestures(
+                    onDragStart = {
+                        totalDrag = 0f
+                        triggered = false
+                    },
+                    onVerticalDrag = { _, dragAmount ->
+                        totalDrag += dragAmount
+                        if (totalDrag < -100 && !triggered) {
+                            triggered = true
+                            onOpenDrawer()
+                        }
+                    },
+                )
             },
     ) {
         Column(
