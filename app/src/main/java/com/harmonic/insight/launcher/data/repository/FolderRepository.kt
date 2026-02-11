@@ -1,7 +1,6 @@
 package com.harmonic.insight.launcher.data.repository
 
 import com.harmonic.insight.launcher.data.local.FolderDao
-import com.harmonic.insight.launcher.data.local.entity.FolderAppEntity
 import com.harmonic.insight.launcher.data.local.entity.FolderEntity
 import kotlinx.coroutines.flow.Flow
 import javax.inject.Inject
@@ -29,8 +28,7 @@ class FolderRepository @Inject constructor(
     }
 
     suspend fun addAppToFolder(folderId: Long, packageName: String) {
-        val count = folderDao.getFolderAppCount(folderId)
-        folderDao.insertFolderApp(FolderAppEntity(folderId, packageName, count))
+        folderDao.addAppToFolderTransactional(folderId, packageName)
     }
 
     suspend fun removeAppFromFolder(folderId: Long, packageName: String) {

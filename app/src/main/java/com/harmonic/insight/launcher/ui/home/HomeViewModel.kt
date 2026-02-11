@@ -177,13 +177,15 @@ class HomeViewModel @Inject constructor(
             folderRepository.getAllFolders(),
             folderRepository.getAllFolderApps(),
         ) { folders, folderApps ->
-            val appsByFolder = folderApps.groupBy { it.folderId }
-            folders.map { folder ->
-                val apps = appsByFolder[folder.id]
-                    ?.sortedBy { it.position }
-                    ?.mapNotNull { fa -> loadAppInfo(fa.packageName) }
-                    ?: emptyList()
-                FolderInfo(id = folder.id, name = folder.name, apps = apps)
+            withContext(Dispatchers.IO) {
+                val appsByFolder = folderApps.groupBy { it.folderId }
+                folders.map { folder ->
+                    val apps = appsByFolder[folder.id]
+                        ?.sortedBy { it.position }
+                        ?.mapNotNull { fa -> loadAppInfo(fa.packageName) }
+                        ?: emptyList()
+                    FolderInfo(id = folder.id, name = folder.name, apps = apps)
+                }
             }
         }.collect { folderInfos ->
             _uiState.value = _uiState.value.copy(folders = folderInfos)
