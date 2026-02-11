@@ -8,21 +8,24 @@ import android.graphics.drawable.Drawable
 import android.util.DisplayMetrics
 import dagger.hilt.android.qualifiers.ApplicationContext
 import org.json.JSONObject
+import java.io.File
+import java.io.FileInputStream
 import javax.inject.Inject
 import javax.inject.Singleton
 
 /**
- * Reads launcher-manifest.json from assets and provides branded icon loading
+ * Reads launcher-manifest.json and provides branded icon loading
  * for known Insight products.
  *
- * Icon resolution:
- *   1. Check if the package matches a known Insight product
- *   2. If yes, load the branded icon from assets/launcher/{code}/mipmap-{density}/ic_launcher.png
- *   3. If no match or asset loading fails, fall back to PackageManager.getApplicationIcon()
+ * Icon resolution priority:
+ *   1. Runtime cache  (filesDir/launcher_icon_cache/) — downloaded by IconSyncManager
+ *   2. Bundled assets (assets/launcher/)              — baked in at build time
+ *   3. PackageManager                                 — system icon fallback
  */
 @Singleton
 class LauncherManifestReader @Inject constructor(
     @ApplicationContext private val context: Context,
+    private val iconSyncManager: IconSyncManager,
 ) {
     private val packageManager: PackageManager = context.packageManager
 
@@ -47,8 +50,8 @@ class LauncherManifestReader @Inject constructor(
     }
 
     /**
-     * Try to load a branded icon from assets for the given package name.
-     * Returns null if no branded icon is available.
+     * Try to load a branded icon for the given package name.
+     * Checks cache first, then bundled assets.
      */
     fun loadBrandedIcon(packageName: String): Drawable? {
         val code = packageToCode[packageName] ?: return null
@@ -57,18 +60,27 @@ class LauncherManifestReader @Inject constructor(
 
     /**
      * Load icon directly by product code (e.g. "INSS", "CAMERA").
+     * Priority: runtime cache → bundled assets.
      */
     fun loadIconByCode(code: String): Drawable? {
         val density = getOptimalDensity()
-        val path = "launcher/$code/mipmap-$density/ic_launcher.png"
-        return try {
-            context.assets.open(path).use { stream ->
-                val bitmap = BitmapFactory.decodeStream(stream) ?: return null
-                BitmapDrawable(context.resources, bitmap)
-            }
-        } catch (_: Exception) {
-            null
-        }
+
+        // 1. Try runtime cache (downloaded by IconSyncManager)
+        loadFromCache(code, density)?.let { return it }
+
+        // 2. Try bundled assets
+        loadFromAssets(code, density)?.let { return it }
+
+        return null
+    }
+
+    /**
+     * Reload manifest entries after a sync operation.
+     */
+    fun invalidateCache() {
+        // entries is lazy; force re-evaluation by accessing fresh data
+        // In practice the lazy delegate won't re-run, so we use a mutable backing field
+        _cachedEntries = null
     }
 
     /**
@@ -87,34 +99,96 @@ class LauncherManifestReader @Inject constructor(
             .sortedBy { it.displayOrder }
     }
 
-    private fun loadManifest(): Map<String, ManifestEntry> {
-        return try {
-            val json = context.assets.open("launcher/launcher-manifest.json")
-                .bufferedReader().use { it.readText() }
-            val root = JSONObject(json)
-            val entriesArray = root.getJSONArray("entries")
-            val result = mutableMapOf<String, ManifestEntry>()
+    // =========================================================================
+    // Icon loading
+    // =========================================================================
 
-            for (i in 0 until entriesArray.length()) {
-                val obj = entriesArray.getJSONObject(i)
-                val entry = ManifestEntry(
-                    code = obj.getString("code"),
-                    name = obj.getString("name"),
-                    category = obj.getString("category"),
-                    displayOrder = obj.getInt("displayOrder"),
-                    isProduct = obj.getBoolean("isProduct"),
-                )
-                result[entry.code] = entry
+    private fun loadFromCache(code: String, density: String): Drawable? {
+        val file = File(
+            iconSyncManager.getCacheDirectory(),
+            "$code/mipmap-$density/ic_launcher.png"
+        )
+        if (!file.exists()) return null
+        return try {
+            FileInputStream(file).use { stream ->
+                val bitmap = BitmapFactory.decodeStream(stream) ?: return null
+                BitmapDrawable(context.resources, bitmap)
             }
-            result
         } catch (_: Exception) {
-            emptyMap()
+            null
         }
     }
 
-    /**
-     * Build package name → product code mapping for all known Insight apps.
-     */
+    private fun loadFromAssets(code: String, density: String): Drawable? {
+        val path = "launcher/$code/mipmap-$density/ic_launcher.png"
+        return try {
+            context.assets.open(path).use { stream ->
+                val bitmap = BitmapFactory.decodeStream(stream) ?: return null
+                BitmapDrawable(context.resources, bitmap)
+            }
+        } catch (_: Exception) {
+            null
+        }
+    }
+
+    // =========================================================================
+    // Manifest loading
+    // =========================================================================
+
+    @Volatile
+    private var _cachedEntries: Map<String, ManifestEntry>? = null
+
+    private fun loadManifest(): Map<String, ManifestEntry> {
+        _cachedEntries?.let { return it }
+
+        val result = loadManifestFromCache() ?: loadManifestFromAssets() ?: emptyMap()
+        _cachedEntries = result
+        return result
+    }
+
+    private fun loadManifestFromCache(): Map<String, ManifestEntry>? {
+        val file = File(iconSyncManager.getCacheDirectory(), "launcher-manifest.json")
+        if (!file.exists()) return null
+        return try {
+            parseManifest(file.readText())
+        } catch (_: Exception) {
+            null
+        }
+    }
+
+    private fun loadManifestFromAssets(): Map<String, ManifestEntry>? {
+        return try {
+            val json = context.assets.open("launcher/launcher-manifest.json")
+                .bufferedReader().use { it.readText() }
+            parseManifest(json)
+        } catch (_: Exception) {
+            null
+        }
+    }
+
+    private fun parseManifest(json: String): Map<String, ManifestEntry> {
+        val root = JSONObject(json)
+        val entriesArray = root.getJSONArray("entries")
+        val result = mutableMapOf<String, ManifestEntry>()
+
+        for (i in 0 until entriesArray.length()) {
+            val obj = entriesArray.getJSONObject(i)
+            val entry = ManifestEntry(
+                code = obj.getString("code"),
+                name = obj.getString("name"),
+                category = obj.getString("category"),
+                displayOrder = obj.getInt("displayOrder"),
+                isProduct = obj.getBoolean("isProduct"),
+            )
+            result[entry.code] = entry
+        }
+        return result
+    }
+
+    // =========================================================================
+    // Package mapping
+    // =========================================================================
+
     private fun buildPackageMapping(): Map<String, String> {
         val map = mutableMapOf<String, String>()
 
