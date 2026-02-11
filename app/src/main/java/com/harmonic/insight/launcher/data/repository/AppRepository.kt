@@ -3,6 +3,7 @@ package com.harmonic.insight.launcher.data.repository
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
+import com.harmonic.insight.launcher.data.icon.LauncherManifestReader
 import com.harmonic.insight.launcher.data.local.AppDao
 import com.harmonic.insight.launcher.data.local.entity.AppEntity
 import com.harmonic.insight.launcher.data.model.AppCategory
@@ -23,6 +24,7 @@ class AppRepository @Inject constructor(
     @ApplicationContext private val context: Context,
     private val appDao: AppDao,
     private val appClassifier: AppClassifier,
+    private val launcherManifestReader: LauncherManifestReader,
 ) {
     private val packageManager: PackageManager = context.packageManager
 
@@ -205,11 +207,7 @@ class AppRepository @Inject constructor(
     }
 
     private fun entityToAppInfo(entity: AppEntity): AppInfo {
-        val icon = try {
-            packageManager.getApplicationIcon(entity.packageName)
-        } catch (_: Exception) {
-            packageManager.defaultActivityIcon
-        }
+        val icon = launcherManifestReader.loadIconWithFallback(entity.packageName)
 
         return AppInfo(
             packageName = entity.packageName,

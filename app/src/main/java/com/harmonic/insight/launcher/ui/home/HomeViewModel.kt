@@ -12,6 +12,8 @@ import com.harmonic.insight.launcher.data.local.entity.FolderEntity
 import com.harmonic.insight.launcher.data.model.AppCategory
 import com.harmonic.insight.launcher.data.model.AppInfo
 import com.harmonic.insight.launcher.data.model.FolderInfo
+import com.harmonic.insight.launcher.data.icon.IconSyncManager
+import com.harmonic.insight.launcher.data.icon.LauncherManifestReader
 import com.harmonic.insight.launcher.data.repository.AppRepository
 import com.harmonic.insight.launcher.data.repository.CategoryRepository
 import com.harmonic.insight.launcher.data.repository.FolderRepository
@@ -55,6 +57,8 @@ class HomeViewModel @Inject constructor(
     private val categoryRepository: CategoryRepository,
     private val folderRepository: FolderRepository,
     private val launchAppUseCase: LaunchAppUseCase,
+    private val iconSyncManager: IconSyncManager,
+    private val launcherManifestReader: LauncherManifestReader,
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(HomeUiState())
@@ -71,6 +75,16 @@ class HomeViewModel @Inject constructor(
 
         viewModelScope.launch {
             loadCategorizedApps()
+        }
+
+        // Sync branded icons from remote in background
+        viewModelScope.launch(Dispatchers.IO) {
+            val updated = iconSyncManager.sync()
+            if (updated) {
+                launcherManifestReader.invalidateCache()
+                // Re-collect apps so icons refresh
+                appRepository.refreshInstalledApps()
+            }
         }
 
         viewModelScope.launch {
@@ -265,7 +279,7 @@ class HomeViewModel @Inject constructor(
         return try {
             val appInfo = packageManager.getApplicationInfo(packageName, 0)
             val appName = appInfo.loadLabel(packageManager).toString()
-            val icon = packageManager.getApplicationIcon(packageName)
+            val icon = launcherManifestReader.loadIconWithFallback(packageName)
             AppInfo(
                 packageName = packageName,
                 appName = appName,
