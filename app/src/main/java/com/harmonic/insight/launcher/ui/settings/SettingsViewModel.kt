@@ -52,7 +52,7 @@ class SettingsViewModel @Inject constructor(
 
     fun reclassifyApps() {
         viewModelScope.launch {
-            appRepository.refreshInstalledApps()
+            appRepository.reclassifyApps()
         }
     }
 }

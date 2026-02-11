@@ -1,8 +1,10 @@
 package com.harmonic.insight.launcher.ui.drawer
 
 import android.content.Context
+import android.widget.Toast
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.harmonic.insight.launcher.R
 import com.harmonic.insight.launcher.data.model.AppCategory
 import com.harmonic.insight.launcher.data.model.AppInfo
 import com.harmonic.insight.launcher.data.repository.AppRepository
@@ -75,7 +77,10 @@ class AppDrawerViewModel @Inject constructor(
 
     fun launchApp(packageName: String) {
         viewModelScope.launch {
-            launchAppUseCase(packageName)
+            val launched = launchAppUseCase(packageName)
+            if (!launched) {
+                Toast.makeText(context, R.string.launch_failed, Toast.LENGTH_SHORT).show()
+            }
         }
     }
 

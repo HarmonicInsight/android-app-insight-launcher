@@ -31,6 +31,9 @@ interface CategoryDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertDockApp(dock: DockEntity)
 
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertDockApps(docks: List<DockEntity>)
+
     @Query("DELETE FROM dock")
     suspend fun clearDock()
 

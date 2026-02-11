@@ -51,7 +51,9 @@ class CategoryRepository @Inject constructor(
 
     suspend fun setDockApps(apps: List<DockEntity>) {
         categoryDao.clearDock()
-        apps.forEach { categoryDao.insertDockApp(it) }
+        if (apps.isNotEmpty()) {
+            categoryDao.insertDockApps(apps)
+        }
     }
 
     // Settings

@@ -39,4 +39,14 @@
     <string name="settings_developer">Developer</string>
     <string name="settings_set_default_launcher">Set as default launcher</string>
     <string name="settings_set_default_launcher_description">Open device home app settings</string>
+
+    <!-- Confirmation dialogs -->
+    <string name="confirm_uninstall_title">Confirm uninstall</string>
+    <string name="confirm_uninstall_message">Uninstall "%s"?</string>
+    <string name="confirm_reclassify_title">Confirm re-classification</string>
+    <string name="confirm_reclassify_message">All apps will be re-classified. Manual category changes will be preserved.</string>
+    <string name="cancel">Cancel</string>
+    <string name="confirm">Confirm</string>
+    <string name="reclassify_complete">Re-classification complete</string>
+    <string name="launch_failed">Failed to launch app</string>
 </resources>

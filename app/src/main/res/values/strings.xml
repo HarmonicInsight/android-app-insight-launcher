@@ -39,4 +39,14 @@
     <string name="settings_developer">開発者</string>
     <string name="settings_set_default_launcher">デフォルトランチャーに設定</string>
     <string name="settings_set_default_launcher_description">端末のホームアプリ設定を開きます</string>
+
+    <!-- Confirmation dialogs -->
+    <string name="confirm_uninstall_title">アンインストール確認</string>
+    <string name="confirm_uninstall_message">「%s」をアンインストールしますか？</string>
+    <string name="confirm_reclassify_title">再分類の確認</string>
+    <string name="confirm_reclassify_message">すべてのアプリを再分類します。手動で変更したカテゴリは維持されます。</string>
+    <string name="cancel">キャンセル</string>
+    <string name="confirm">実行</string>
+    <string name="reclassify_complete">再分類が完了しました</string>
+    <string name="launch_failed">アプリの起動に失敗しました</string>
 </resources>

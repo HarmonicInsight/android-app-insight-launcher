@@ -25,6 +25,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.GridView
 import androidx.compose.material.icons.filled.ViewList
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
@@ -32,6 +33,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -196,6 +198,29 @@ private fun AppListItem(
 ) {
     var showContextMenu by remember { mutableStateOf(false) }
     var showCategoryPicker by remember { mutableStateOf(false) }
+    var showUninstallConfirm by remember { mutableStateOf(false) }
+
+    // Uninstall confirmation dialog
+    if (showUninstallConfirm) {
+        AlertDialog(
+            onDismissRequest = { showUninstallConfirm = false },
+            title = { Text(stringResource(R.string.confirm_uninstall_title)) },
+            text = { Text(stringResource(R.string.confirm_uninstall_message, app.appName)) },
+            confirmButton = {
+                TextButton(onClick = {
+                    showUninstallConfirm = false
+                    onUninstall()
+                }) {
+                    Text(stringResource(R.string.confirm))
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showUninstallConfirm = false }) {
+                    Text(stringResource(R.string.cancel))
+                }
+            },
+        )
+    }
 
     Box {
         Row(
@@ -246,7 +271,7 @@ private fun AppListItem(
                 text = { Text(stringResource(R.string.uninstall)) },
                 onClick = {
                     showContextMenu = false
-                    onUninstall()
+                    showUninstallConfirm = true
                 },
             )
         }

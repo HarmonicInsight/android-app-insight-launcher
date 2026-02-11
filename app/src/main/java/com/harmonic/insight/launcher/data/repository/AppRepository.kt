@@ -11,6 +11,8 @@ import com.harmonic.insight.launcher.domain.classifier.AppClassifier
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.withContext
 import javax.inject.Inject
@@ -36,25 +38,25 @@ class AppRepository @Inject constructor(
     fun getAllAppsWithIcons(): Flow<List<AppInfo>> {
         return appDao.getAllApps().map { entities ->
             entities.map { entity -> entityToAppInfo(entity) }
-        }
+        }.flowOn(Dispatchers.IO)
     }
 
     fun getAppsByCategoryWithIcons(category: AppCategory): Flow<List<AppInfo>> {
         return appDao.getAppsByCategory(category).map { entities ->
             entities.map { entity -> entityToAppInfo(entity) }
-        }
+        }.flowOn(Dispatchers.IO)
     }
 
     fun searchAppsWithIcons(query: String): Flow<List<AppInfo>> {
         return appDao.searchApps(query).map { entities ->
             entities.map { entity -> entityToAppInfo(entity) }
-        }
+        }.flowOn(Dispatchers.IO)
     }
 
     fun getRecentAppsWithIcons(limit: Int = 5): Flow<List<AppInfo>> {
         return appDao.getRecentApps(limit).map { entities ->
             entities.map { entity -> entityToAppInfo(entity) }
-        }
+        }.flowOn(Dispatchers.IO)
     }
 
     suspend fun getAppCategory(packageName: String): AppCategory {
@@ -66,6 +68,10 @@ class AppRepository @Inject constructor(
             val launchableApps = getLaunchableApps()
             val userCategorized = appDao.getUserCategorizedApps()
                 .associate { it.packageName to it.category }
+
+            // Batch fetch existing apps to avoid N+1 query
+            val existingApps = appDao.getAllApps().first()
+            val timestampMap = existingApps.associate { it.packageName to it.lastUsedTimestamp }
 
             val entities = launchableApps.mapNotNull { resolveInfo ->
                 try {
@@ -92,7 +98,7 @@ class AppRepository @Inject constructor(
                         appName = appName,
                         category = category,
                         isUserCategorized = userCategorized.containsKey(packageName),
-                        lastUsedTimestamp = appDao.getApp(packageName)?.lastUsedTimestamp ?: 0L,
+                        lastUsedTimestamp = timestampMap[packageName] ?: 0L,
                     )
                 } catch (_: Exception) {
                     null
@@ -101,11 +107,68 @@ class AppRepository @Inject constructor(
 
             if (entities.isNotEmpty()) {
                 appDao.insertApps(entities)
-                val installedPackages = entities.map { it.packageName }
-                appDao.removeUninstalledApps(installedPackages)
             }
+            // Always clean up stale entries, even if entities is empty
+            val installedPackages = entities.map { it.packageName }
+            appDao.removeUninstalledApps(installedPackages)
         } catch (_: Exception) {
             // Prevent crash - drawer will show empty state
+        }
+    }
+
+    /**
+     * Re-classify apps while preserving user-categorized apps.
+     */
+    suspend fun reclassifyApps() = withContext(Dispatchers.IO) {
+        try {
+            val launchableApps = getLaunchableApps()
+            val userCategorized = appDao.getUserCategorizedApps()
+                .associate { it.packageName to it }
+
+            val existingApps = appDao.getAllApps().first()
+            val timestampMap = existingApps.associate { it.packageName to it.lastUsedTimestamp }
+
+            val entities = launchableApps.mapNotNull { resolveInfo ->
+                try {
+                    val packageName = resolveInfo.activityInfo.packageName
+                    val appName = resolveInfo.loadLabel(packageManager).toString()
+
+                    // Preserve user-categorized apps
+                    if (userCategorized.containsKey(packageName)) {
+                        val existing = userCategorized[packageName]!!
+                        existing.copy(appName = appName)
+                    } else {
+                        val appInfo = try {
+                            packageManager.getApplicationInfo(packageName, 0)
+                        } catch (_: Exception) {
+                            null
+                        }
+                        val category = if (appInfo != null) {
+                            appClassifier.classify(packageName, appInfo)
+                        } else {
+                            AppCategory.OTHER
+                        }
+
+                        AppEntity(
+                            packageName = packageName,
+                            appName = appName,
+                            category = category,
+                            isUserCategorized = false,
+                            lastUsedTimestamp = timestampMap[packageName] ?: 0L,
+                        )
+                    }
+                } catch (_: Exception) {
+                    null
+                }
+            }
+
+            if (entities.isNotEmpty()) {
+                appDao.insertApps(entities)
+            }
+            val installedPackages = entities.map { it.packageName }
+            appDao.removeUninstalledApps(installedPackages)
+        } catch (_: Exception) {
+            // Prevent crash
         }
     }
 

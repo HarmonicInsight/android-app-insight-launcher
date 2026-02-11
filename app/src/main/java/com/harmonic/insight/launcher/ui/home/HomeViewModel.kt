@@ -11,13 +11,16 @@ import com.harmonic.insight.launcher.data.repository.AppRepository
 import com.harmonic.insight.launcher.data.repository.CategoryRepository
 import com.harmonic.insight.launcher.domain.usecase.LaunchAppUseCase
 import com.harmonic.insight.launcher.util.PackageUtils
+import android.widget.Toast
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import javax.inject.Inject
 
 data class HomeUiState(
@@ -42,18 +45,23 @@ class HomeViewModel @Inject constructor(
     private val packageManager: PackageManager = context.packageManager
 
     init {
+        // One-time initialization
         viewModelScope.launch {
             appRepository.refreshInstalledApps()
             setupInitialDock()
             checkOnboarding()
+        }
+
+        // Long-running: observe categorized apps reactively (separate coroutine)
+        viewModelScope.launch {
             loadCategorizedApps()
         }
 
-        // Observe dock apps reactively
+        // Long-running: observe dock apps reactively (separate coroutine)
         viewModelScope.launch {
             categoryRepository.getDockApps().collect { dock ->
-                val dockApps = dock.mapNotNull { d ->
-                    loadAppInfo(d.packageName)
+                val dockApps = withContext(Dispatchers.IO) {
+                    dock.mapNotNull { d -> loadAppInfo(d.packageName) }
                 }
                 _uiState.value = _uiState.value.copy(dockApps = dockApps)
             }
@@ -62,7 +70,14 @@ class HomeViewModel @Inject constructor(
 
     fun launchApp(packageName: String) {
         viewModelScope.launch {
-            launchAppUseCase(packageName)
+            val launched = launchAppUseCase(packageName)
+            if (!launched) {
+                Toast.makeText(
+                    context,
+                    com.harmonic.insight.launcher.R.string.launch_failed,
+                    Toast.LENGTH_SHORT,
+                ).show()
+            }
         }
     }
 
