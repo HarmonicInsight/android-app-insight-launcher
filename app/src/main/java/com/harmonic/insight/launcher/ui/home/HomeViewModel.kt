@@ -7,6 +7,8 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.harmonic.insight.launcher.R
 import com.harmonic.insight.launcher.data.local.entity.DockEntity
+import com.harmonic.insight.launcher.data.local.entity.FolderAppEntity
+import com.harmonic.insight.launcher.data.local.entity.FolderEntity
 import com.harmonic.insight.launcher.data.model.AppCategory
 import com.harmonic.insight.launcher.data.model.AppInfo
 import com.harmonic.insight.launcher.data.model.FolderInfo
@@ -176,7 +178,7 @@ class HomeViewModel @Inject constructor(
         combine(
             folderRepository.getAllFolders(),
             folderRepository.getAllFolderApps(),
-        ) { folders, folderApps ->
+        ) { folders: List<FolderEntity>, folderApps: List<FolderAppEntity> ->
             withContext(Dispatchers.IO) {
                 val appsByFolder = folderApps.groupBy { it.folderId }
                 folders.map { folder ->
