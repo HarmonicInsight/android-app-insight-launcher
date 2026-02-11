@@ -1,6 +1,7 @@
 package com.harmonic.insight.launcher.data.repository
 
 import com.harmonic.insight.launcher.data.local.FolderDao
+import com.harmonic.insight.launcher.data.local.entity.FolderAppEntity
 import com.harmonic.insight.launcher.data.local.entity.FolderEntity
 import kotlinx.coroutines.flow.Flow
 import javax.inject.Inject
