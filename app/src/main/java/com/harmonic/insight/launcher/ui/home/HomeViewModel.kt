@@ -9,8 +9,10 @@ import com.harmonic.insight.launcher.R
 import com.harmonic.insight.launcher.data.local.entity.DockEntity
 import com.harmonic.insight.launcher.data.model.AppCategory
 import com.harmonic.insight.launcher.data.model.AppInfo
+import com.harmonic.insight.launcher.data.model.FolderInfo
 import com.harmonic.insight.launcher.data.repository.AppRepository
 import com.harmonic.insight.launcher.data.repository.CategoryRepository
+import com.harmonic.insight.launcher.data.repository.FolderRepository
 import com.harmonic.insight.launcher.domain.usecase.LaunchAppUseCase
 import com.harmonic.insight.launcher.util.PackageUtils
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -19,6 +21,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -38,6 +41,7 @@ data class HomeUiState(
     val groupedApps: Map<AppCategory, List<SubCategoryGroup>> = emptyMap(),
     val dockApps: List<AppInfo> = emptyList(),
     val allApps: List<AppInfo> = emptyList(),
+    val folders: List<FolderInfo> = emptyList(),
     val isLoading: Boolean = true,
     val showOnboarding: Boolean = false,
 )
@@ -47,6 +51,7 @@ class HomeViewModel @Inject constructor(
     @ApplicationContext private val context: Context,
     private val appRepository: AppRepository,
     private val categoryRepository: CategoryRepository,
+    private val folderRepository: FolderRepository,
     private val launchAppUseCase: LaunchAppUseCase,
 ) : ViewModel() {
 
@@ -73,6 +78,10 @@ class HomeViewModel @Inject constructor(
                 }
                 _uiState.value = _uiState.value.copy(dockApps = dockApps)
             }
+        }
+
+        viewModelScope.launch {
+            loadFolders()
         }
     }
 
@@ -121,6 +130,63 @@ class HomeViewModel @Inject constructor(
         viewModelScope.launch {
             categoryRepository.setOnboardingCompleted()
             _uiState.value = _uiState.value.copy(showOnboarding = false)
+        }
+    }
+
+    fun createFolder(name: String) {
+        viewModelScope.launch {
+            folderRepository.createFolder(name)
+        }
+    }
+
+    fun renameFolder(folderId: Long, name: String) {
+        viewModelScope.launch {
+            folderRepository.renameFolder(folderId, name)
+        }
+    }
+
+    fun deleteFolder(folderId: Long) {
+        viewModelScope.launch {
+            folderRepository.deleteFolder(folderId)
+        }
+    }
+
+    fun addAppToFolder(folderId: Long, packageName: String) {
+        viewModelScope.launch {
+            folderRepository.addAppToFolder(folderId, packageName)
+            Toast.makeText(context, R.string.folder_app_added, Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    fun createFolderWithApp(name: String, packageName: String) {
+        viewModelScope.launch {
+            val folderId = folderRepository.createFolder(name)
+            folderRepository.addAppToFolder(folderId, packageName)
+            Toast.makeText(context, R.string.folder_app_added, Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    fun removeAppFromFolder(folderId: Long, packageName: String) {
+        viewModelScope.launch {
+            folderRepository.removeAppFromFolder(folderId, packageName)
+        }
+    }
+
+    private suspend fun loadFolders() {
+        combine(
+            folderRepository.getAllFolders(),
+            folderRepository.getAllFolderApps(),
+        ) { folders, folderApps ->
+            val appsByFolder = folderApps.groupBy { it.folderId }
+            folders.map { folder ->
+                val apps = appsByFolder[folder.id]
+                    ?.sortedBy { it.position }
+                    ?.mapNotNull { fa -> loadAppInfo(fa.packageName) }
+                    ?: emptyList()
+                FolderInfo(id = folder.id, name = folder.name, apps = apps)
+            }
+        }.collect { folderInfos ->
+            _uiState.value = _uiState.value.copy(folders = folderInfos)
         }
     }
 

@@ -5,6 +5,7 @@ import androidx.room.Room
 import com.harmonic.insight.launcher.data.local.AppDao
 import com.harmonic.insight.launcher.data.local.AppDatabase
 import com.harmonic.insight.launcher.data.local.CategoryDao
+import com.harmonic.insight.launcher.data.local.FolderDao
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -37,5 +38,11 @@ object AppModule {
     @Singleton
     fun provideCategoryDao(database: AppDatabase): CategoryDao {
         return database.categoryDao()
+    }
+
+    @Provides
+    @Singleton
+    fun provideFolderDao(database: AppDatabase): FolderDao {
+        return database.folderDao()
     }
 }

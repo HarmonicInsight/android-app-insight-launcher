@@ -46,10 +46,17 @@ fun AppIcon(
     labelColor: Color = Color.Unspecified,
     onClick: () -> Unit = {},
     onLongClick: () -> Unit = {},
+    interactive: Boolean = true,
     modifier: Modifier = Modifier,
 ) {
     val imageBitmap = remember(icon) {
         IconUtils.drawableToImageBitmap(icon, iconSize.sizeDp.value.toInt() * 2)
+    }
+
+    val gestureModifier = if (interactive) {
+        Modifier.combinedClickable(onClick = onClick, onLongClick = onLongClick)
+    } else {
+        Modifier
     }
 
     Column(
@@ -57,10 +64,7 @@ fun AppIcon(
         verticalArrangement = Arrangement.spacedBy(4.dp),
         modifier = modifier
             .width(iconSize.labelWidth + 8.dp)
-            .combinedClickable(
-                onClick = onClick,
-                onLongClick = onLongClick,
-            ),
+            .then(gestureModifier),
     ) {
         if (imageBitmap != null) {
             Image(
