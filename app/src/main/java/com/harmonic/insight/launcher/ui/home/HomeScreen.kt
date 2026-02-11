@@ -1,15 +1,18 @@
 package com.harmonic.insight.launcher.ui.home
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.gestures.detectVerticalDragGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -47,6 +50,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -64,6 +68,7 @@ import com.harmonic.insight.launcher.ui.components.IconSize
 @Composable
 fun HomeScreen(
     onOpenSearch: () -> Unit,
+    onOpenDrawer: () -> Unit,
     onOpenSettings: () -> Unit,
     viewModel: HomeViewModel = hiltViewModel(),
 ) {
@@ -78,8 +83,29 @@ fun HomeScreen(
     var dockEditPosition by remember { mutableIntStateOf(-1) }
     var showDockAppPicker by remember { mutableStateOf(false) }
 
+    var totalDrag by remember { mutableStateOf(0f) }
+    var drawerOpened by remember { mutableStateOf(false) }
+
     Box(
-        modifier = Modifier.fillMaxSize(),
+        modifier = Modifier
+            .fillMaxSize()
+            .pointerInput(Unit) {
+                detectVerticalDragGestures(
+                    onDragStart = {
+                        totalDrag = 0f
+                        drawerOpened = false
+                    },
+                    onDragEnd = { totalDrag = 0f },
+                    onDragCancel = { totalDrag = 0f },
+                ) { _, dragAmount ->
+                    totalDrag += dragAmount
+                    // Swipe up (accumulated negative drag > 100px) to open drawer
+                    if (totalDrag < -100f && !drawerOpened) {
+                        drawerOpened = true
+                        onOpenDrawer()
+                    }
+                }
+            },
     ) {
         Column(
             modifier = Modifier
@@ -130,7 +156,21 @@ fun HomeScreen(
                 Spacer(modifier = Modifier.weight(1f))
             }
 
-            Spacer(modifier = Modifier.height(8.dp))
+            // Drawer handle indicator (tap or swipe up)
+            Box(
+                modifier = Modifier
+                    .padding(vertical = 8.dp)
+                    .clickable { onOpenDrawer() },
+                contentAlignment = Alignment.Center,
+            ) {
+                Box(
+                    modifier = Modifier
+                        .width(32.dp)
+                        .height(4.dp)
+                        .clip(RoundedCornerShape(2.dp))
+                        .background(Color.White.copy(alpha = 0.5f)),
+                )
+            }
 
             HomeSearchBar(onClick = onOpenSearch)
 
