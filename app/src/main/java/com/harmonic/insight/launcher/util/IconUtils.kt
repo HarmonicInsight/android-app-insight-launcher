@@ -11,7 +11,11 @@ object IconUtils {
 
     fun drawableToImageBitmap(drawable: Drawable?, size: Int = 128): ImageBitmap? {
         if (drawable == null) return null
-        return drawableToBitmap(drawable, size).asImageBitmap()
+        return try {
+            drawableToBitmap(drawable, size).asImageBitmap()
+        } catch (_: Exception) {
+            null
+        }
     }
 
     private fun drawableToBitmap(drawable: Drawable, size: Int): Bitmap {

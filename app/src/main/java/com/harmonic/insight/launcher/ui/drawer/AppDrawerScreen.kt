@@ -16,6 +16,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
@@ -121,7 +122,16 @@ fun AppDrawerScreen(
             }
 
             // App list or grid
-            if (uiState.viewMode == "list") {
+            if (uiState.isLoading) {
+                Box(
+                    contentAlignment = Alignment.Center,
+                    modifier = Modifier
+                        .weight(1f)
+                        .fillMaxWidth(),
+                ) {
+                    CircularProgressIndicator()
+                }
+            } else if (uiState.viewMode == "list") {
                 AppListView(
                     apps = uiState.apps,
                     onAppClick = { viewModel.launchApp(it.packageName) },

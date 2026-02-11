@@ -8,5 +8,9 @@ class Converters {
     fun fromAppCategory(category: AppCategory): String = category.name
 
     @TypeConverter
-    fun toAppCategory(name: String): AppCategory = AppCategory.valueOf(name)
+    fun toAppCategory(name: String): AppCategory = try {
+        AppCategory.valueOf(name)
+    } catch (_: IllegalArgumentException) {
+        AppCategory.OTHER
+    }
 }

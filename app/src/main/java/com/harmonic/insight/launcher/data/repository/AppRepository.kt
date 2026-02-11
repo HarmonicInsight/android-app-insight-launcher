@@ -62,41 +62,51 @@ class AppRepository @Inject constructor(
     }
 
     suspend fun refreshInstalledApps() = withContext(Dispatchers.IO) {
-        val launchableApps = getLaunchableApps()
-        val userCategorized = appDao.getUserCategorizedApps()
-            .associate { it.packageName to it.category }
+        try {
+            val launchableApps = getLaunchableApps()
+            val userCategorized = appDao.getUserCategorizedApps()
+                .associate { it.packageName to it.category }
 
-        val entities = launchableApps.map { resolveInfo ->
-            val packageName = resolveInfo.activityInfo.packageName
-            val appName = resolveInfo.loadLabel(packageManager).toString()
+            val entities = launchableApps.mapNotNull { resolveInfo ->
+                try {
+                    val packageName = resolveInfo.activityInfo.packageName
+                    val appName = resolveInfo.loadLabel(packageManager).toString()
 
-            val category = if (userCategorized.containsKey(packageName)) {
-                userCategorized[packageName]!!
-            } else {
-                val appInfo = try {
-                    packageManager.getApplicationInfo(packageName, 0)
-                } catch (_: PackageManager.NameNotFoundException) {
+                    val category = if (userCategorized.containsKey(packageName)) {
+                        userCategorized[packageName]!!
+                    } else {
+                        val appInfo = try {
+                            packageManager.getApplicationInfo(packageName, 0)
+                        } catch (_: Exception) {
+                            null
+                        }
+                        if (appInfo != null) {
+                            appClassifier.classify(packageName, appInfo)
+                        } else {
+                            AppCategory.OTHER
+                        }
+                    }
+
+                    AppEntity(
+                        packageName = packageName,
+                        appName = appName,
+                        category = category,
+                        isUserCategorized = userCategorized.containsKey(packageName),
+                        lastUsedTimestamp = appDao.getApp(packageName)?.lastUsedTimestamp ?: 0L,
+                    )
+                } catch (_: Exception) {
                     null
-                }
-                if (appInfo != null) {
-                    appClassifier.classify(packageName, appInfo)
-                } else {
-                    AppCategory.OTHER
                 }
             }
 
-            AppEntity(
-                packageName = packageName,
-                appName = appName,
-                category = category,
-                isUserCategorized = userCategorized.containsKey(packageName),
-                lastUsedTimestamp = appDao.getApp(packageName)?.lastUsedTimestamp ?: 0L,
-            )
+            if (entities.isNotEmpty()) {
+                appDao.insertApps(entities)
+                val installedPackages = entities.map { it.packageName }
+                appDao.removeUninstalledApps(installedPackages)
+            }
+        } catch (_: Exception) {
+            // Prevent crash - drawer will show empty state
         }
-
-        appDao.insertApps(entities)
-        val installedPackages = entities.map { it.packageName }
-        appDao.removeUninstalledApps(installedPackages)
     }
 
     suspend fun updateAppCategory(packageName: String, category: AppCategory) {
@@ -134,7 +144,7 @@ class AppRepository @Inject constructor(
     private fun entityToAppInfo(entity: AppEntity): AppInfo {
         val icon = try {
             packageManager.getApplicationIcon(entity.packageName)
-        } catch (_: PackageManager.NameNotFoundException) {
+        } catch (_: Exception) {
             packageManager.defaultActivityIcon
         }
 

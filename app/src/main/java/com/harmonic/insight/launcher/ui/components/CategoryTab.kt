@@ -17,6 +17,8 @@ fun CategoryTabRow(
     onCategorySelected: (AppCategory) -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    if (categories.isEmpty()) return
+
     val selectedIndex = categories.indexOf(selectedCategory).coerceAtLeast(0)
 
     ScrollableTabRow(
