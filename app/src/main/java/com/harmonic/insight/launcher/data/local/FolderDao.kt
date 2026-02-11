@@ -10,40 +10,40 @@ import com.harmonic.insight.launcher.data.local.entity.FolderEntity
 import kotlinx.coroutines.flow.Flow
 
 @Dao
-interface FolderDao {
+abstract class FolderDao {
 
     @Query("SELECT * FROM folders ORDER BY position ASC")
-    fun getAllFolders(): Flow<List<FolderEntity>>
+    abstract fun getAllFolders(): Flow<List<FolderEntity>>
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
-    suspend fun insertFolder(folder: FolderEntity): Long
+    abstract suspend fun insertFolder(folder: FolderEntity): Long
 
     @Query("UPDATE folders SET name = :name WHERE id = :folderId")
-    suspend fun renameFolder(folderId: Long, name: String)
+    abstract suspend fun renameFolder(folderId: Long, name: String)
 
     @Query("DELETE FROM folders WHERE id = :folderId")
-    suspend fun deleteFolder(folderId: Long)
+    abstract suspend fun deleteFolder(folderId: Long)
 
     @Query("SELECT * FROM folder_apps WHERE folderId = :folderId ORDER BY position ASC")
-    fun getFolderApps(folderId: Long): Flow<List<FolderAppEntity>>
+    abstract fun getFolderApps(folderId: Long): Flow<List<FolderAppEntity>>
 
     @Query("SELECT * FROM folder_apps ORDER BY position ASC")
-    fun getAllFolderApps(): Flow<List<FolderAppEntity>>
+    abstract fun getAllFolderApps(): Flow<List<FolderAppEntity>>
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
-    suspend fun insertFolderApp(folderApp: FolderAppEntity)
+    abstract suspend fun insertFolderApp(folderApp: FolderAppEntity)
 
     @Query("DELETE FROM folder_apps WHERE folderId = :folderId AND packageName = :packageName")
-    suspend fun removeFolderApp(folderId: Long, packageName: String)
+    abstract suspend fun removeFolderApp(folderId: Long, packageName: String)
 
     @Query("SELECT COUNT(*) FROM folder_apps WHERE folderId = :folderId")
-    suspend fun getFolderAppCount(folderId: Long): Int
+    abstract suspend fun getFolderAppCount(folderId: Long): Int
 
     @Query("SELECT MAX(position) FROM folders")
-    suspend fun getMaxFolderPosition(): Int?
+    abstract suspend fun getMaxFolderPosition(): Int?
 
     @Transaction
-    suspend fun addAppToFolderTransactional(folderId: Long, packageName: String) {
+    open suspend fun addAppToFolderTransactional(folderId: Long, packageName: String) {
         val count = getFolderAppCount(folderId)
         insertFolderApp(FolderAppEntity(folderId, packageName, count))
     }
