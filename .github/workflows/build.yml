@@ -27,15 +27,33 @@ jobs:
       - name: Generate Gradle Wrapper
         run: gradle wrapper --gradle-version 8.11.1
 
-      - name: Build APK
-        run: ./gradlew assembleDebug
+      - name: Generate signing keystore
+        run: |
+          keytool -genkeypair \
+            -v \
+            -keystore ${{ github.workspace }}/release.keystore \
+            -alias insight \
+            -keyalg RSA \
+            -keysize 2048 \
+            -validity 10000 \
+            -storepass insightlauncher \
+            -keypass insightlauncher \
+            -dname "CN=Harmonic Insight, OU=Dev, O=Harmonic Insight, L=Tokyo, ST=Tokyo, C=JP"
+
+      - name: Build Release APK
+        env:
+          KEYSTORE_PATH: ${{ github.workspace }}/release.keystore
+          KEYSTORE_PASSWORD: insightlauncher
+          KEY_ALIAS: insight
+          KEY_PASSWORD: insightlauncher
+        run: ./gradlew assembleRelease
 
       - name: Show APK size
-        run: ls -lh app/build/outputs/apk/debug/*.apk
+        run: ls -lh app/build/outputs/apk/release/*.apk
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
           name: insight-launcher
-          path: app/build/outputs/apk/debug/*.apk
+          path: app/build/outputs/apk/release/*.apk
           retention-days: 90
