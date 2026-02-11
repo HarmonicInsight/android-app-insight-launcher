@@ -41,11 +41,12 @@ class AppDrawerViewModel @Inject constructor(
     init {
         viewModelScope.launch {
             val viewMode = categoryRepository.getDrawerViewMode()
-            val categoryOrder = categoryRepository.getCategoryOrder()
-            _uiState.value = _uiState.value.copy(
-                viewMode = viewMode,
-                categories = categoryOrder,
-            )
+            _uiState.value = _uiState.value.copy(viewMode = viewMode)
+
+            // Ensure apps are populated in the database before loading categories
+            appRepository.refreshInstalledApps()
+
+            // Now load categories (DB is guaranteed to be populated)
             loadAvailableCategories()
         }
     }
@@ -93,26 +94,24 @@ class AppDrawerViewModel @Inject constructor(
         PackageUtils.uninstallApp(context, packageName)
     }
 
-    private fun loadAvailableCategories() {
-        viewModelScope.launch {
-            val allApps = appRepository.getAllApps().first()
-            val usedCategories = allApps.map { it.category }.toSet()
-            val categoryOrder = categoryRepository.getCategoryOrder()
-            val availableCategories = categoryOrder.filter { it in usedCategories }
+    private suspend fun loadAvailableCategories() {
+        val allApps = appRepository.getAllApps().first()
+        val usedCategories = allApps.map { it.category }.toSet()
+        val categoryOrder = categoryRepository.getCategoryOrder()
+        val availableCategories = categoryOrder.filter { it in usedCategories }
 
-            val selectedCategory = if (_uiState.value.selectedCategory in availableCategories) {
-                _uiState.value.selectedCategory
-            } else {
-                availableCategories.firstOrNull() ?: AppCategory.OTHER
-            }
-
-            _uiState.value = _uiState.value.copy(
-                categories = availableCategories,
-                selectedCategory = selectedCategory,
-                isLoading = false,
-            )
-            loadAppsForCategory(selectedCategory)
+        val selectedCategory = if (_uiState.value.selectedCategory in availableCategories) {
+            _uiState.value.selectedCategory
+        } else {
+            availableCategories.firstOrNull() ?: AppCategory.OTHER
         }
+
+        _uiState.value = _uiState.value.copy(
+            categories = availableCategories,
+            selectedCategory = selectedCategory,
+            isLoading = false,
+        )
+        loadAppsForCategory(selectedCategory)
     }
 
     private fun loadAppsForCategory(category: AppCategory) {

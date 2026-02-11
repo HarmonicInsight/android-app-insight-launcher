@@ -99,6 +99,15 @@ fun HomeScreen(
 
             Spacer(modifier = Modifier.weight(1f))
 
+            // Swipe up hint
+            Text(
+                text = stringResource(R.string.swipe_up_hint),
+                style = MaterialTheme.typography.bodySmall,
+                color = Color.White.copy(alpha = 0.7f),
+            )
+
+            Spacer(modifier = Modifier.height(12.dp))
+
             // Search bar
             HomeSearchBar(
                 onClick = onOpenSearch,

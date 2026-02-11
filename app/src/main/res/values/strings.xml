@@ -4,6 +4,7 @@
 
     <!-- Home -->
     <string name="search_hint">アプリを検索…</string>
+    <string name="swipe_up_hint">↑ 上にスワイプでアプリ一覧</string>
 
     <!-- Drawer -->
     <string name="toggle_view_mode">表示切替</string>

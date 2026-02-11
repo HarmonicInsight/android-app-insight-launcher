@@ -35,25 +35,25 @@ class AppRepository @Inject constructor(
 
     fun getAllAppsWithIcons(): Flow<List<AppInfo>> {
         return appDao.getAllApps().map { entities ->
-            entities.mapNotNull { entity -> entityToAppInfo(entity) }
+            entities.map { entity -> entityToAppInfo(entity) }
         }
     }
 
     fun getAppsByCategoryWithIcons(category: AppCategory): Flow<List<AppInfo>> {
         return appDao.getAppsByCategory(category).map { entities ->
-            entities.mapNotNull { entity -> entityToAppInfo(entity) }
+            entities.map { entity -> entityToAppInfo(entity) }
         }
     }
 
     fun searchAppsWithIcons(query: String): Flow<List<AppInfo>> {
         return appDao.searchApps(query).map { entities ->
-            entities.mapNotNull { entity -> entityToAppInfo(entity) }
+            entities.map { entity -> entityToAppInfo(entity) }
         }
     }
 
     fun getRecentAppsWithIcons(limit: Int = 5): Flow<List<AppInfo>> {
         return appDao.getRecentApps(limit).map { entities ->
-            entities.mapNotNull { entity -> entityToAppInfo(entity) }
+            entities.map { entity -> entityToAppInfo(entity) }
         }
     }
 
@@ -131,11 +131,11 @@ class AppRepository @Inject constructor(
         appDao.deleteApp(packageName)
     }
 
-    private fun entityToAppInfo(entity: AppEntity): AppInfo? {
+    private fun entityToAppInfo(entity: AppEntity): AppInfo {
         val icon = try {
             packageManager.getApplicationIcon(entity.packageName)
         } catch (_: PackageManager.NameNotFoundException) {
-            return null
+            packageManager.defaultActivityIcon
         }
 
         return AppInfo(
