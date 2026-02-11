@@ -1,6 +1,8 @@
 package com.harmonic.insight.launcher.ui.drawer
 
 import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.gestures.detectVerticalDragGestures
 import androidx.compose.foundation.layout.Arrangement
@@ -8,6 +10,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -16,20 +19,15 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
-import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
-import androidx.compose.foundation.lazy.items
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.GridView
-import androidx.compose.material.icons.filled.ViewList
+import androidx.compose.foundation.lazy.grid.rememberLazyGridState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -39,20 +37,25 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.harmonic.insight.launcher.R
 import com.harmonic.insight.launcher.data.model.AppCategory
 import com.harmonic.insight.launcher.data.model.AppInfo
 import com.harmonic.insight.launcher.ui.components.AppIcon
-import com.harmonic.insight.launcher.ui.components.CategoryTabRow
 import com.harmonic.insight.launcher.ui.components.DrawerSearchBar
 import com.harmonic.insight.launcher.ui.components.IconSize
+import kotlinx.coroutines.launch
 
 @Composable
 fun AppDrawerScreen(
@@ -60,6 +63,8 @@ fun AppDrawerScreen(
     viewModel: AppDrawerViewModel = hiltViewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsState()
+    val gridState = rememberLazyGridState()
+    val coroutineScope = rememberCoroutineScope()
 
     Surface(
         color = MaterialTheme.colorScheme.surface.copy(alpha = 0.95f),
@@ -83,115 +88,172 @@ fun AppDrawerScreen(
                 )
             },
     ) {
-        Column(
+        Row(
             modifier = Modifier
                 .fillMaxSize()
                 .statusBarsPadding()
                 .navigationBarsPadding(),
         ) {
-            Spacer(modifier = Modifier.height(8.dp))
-
-            // Search bar
-            DrawerSearchBar(
-                query = uiState.searchQuery,
-                onQueryChange = { viewModel.updateSearchQuery(it) },
-            )
-
-            Spacer(modifier = Modifier.height(8.dp))
-
-            // Category tabs + view mode toggle
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier.fillMaxWidth(),
+            // Main content
+            Column(
+                modifier = Modifier
+                    .weight(1f)
+                    .fillMaxHeight(),
             ) {
-                CategoryTabRow(
-                    categories = uiState.categories,
-                    selectedCategory = uiState.selectedCategory,
-                    onCategorySelected = { viewModel.selectCategory(it) },
-                    modifier = Modifier.weight(1f),
+                Spacer(modifier = Modifier.height(8.dp))
+
+                // Search bar
+                DrawerSearchBar(
+                    query = uiState.searchQuery,
+                    onQueryChange = { viewModel.updateSearchQuery(it) },
                 )
 
-                IconButton(onClick = { viewModel.toggleViewMode() }) {
-                    Icon(
-                        imageVector = if (uiState.viewMode == "list") {
-                            Icons.Default.GridView
-                        } else {
-                            Icons.Default.ViewList
-                        },
-                        contentDescription = stringResource(R.string.toggle_view_mode),
-                    )
+                Spacer(modifier = Modifier.height(8.dp))
+
+                // A-Z grid with section headers
+                if (uiState.isLoading) {
+                    Box(
+                        contentAlignment = Alignment.Center,
+                        modifier = Modifier
+                            .weight(1f)
+                            .fillMaxWidth(),
+                    ) {
+                        androidx.compose.material3.CircularProgressIndicator()
+                    }
+                } else {
+                    // Build flat list of items for grid
+                    val gridItems = buildGridItems(uiState.sections)
+
+                    LazyVerticalGrid(
+                        state = gridState,
+                        columns = GridCells.Fixed(4),
+                        horizontalArrangement = Arrangement.SpaceEvenly,
+                        verticalArrangement = Arrangement.spacedBy(12.dp),
+                        modifier = Modifier
+                            .weight(1f)
+                            .padding(horizontal = 12.dp, vertical = 4.dp),
+                    ) {
+                        for (item in gridItems) {
+                            when (item) {
+                                is GridItem.Header -> {
+                                    item(
+                                        span = { GridItemSpan(4) },
+                                        key = "header_${item.title}",
+                                    ) {
+                                        SectionHeader(title = item.title)
+                                    }
+                                }
+                                is GridItem.App -> {
+                                    item(key = item.appInfo.packageName) {
+                                        DrawerAppIcon(
+                                            app = item.appInfo,
+                                            onAppClick = { viewModel.launchApp(item.appInfo.packageName) },
+                                            onCategoryChange = { cat ->
+                                                viewModel.updateAppCategory(item.appInfo.packageName, cat)
+                                            },
+                                            onAppInfo = { viewModel.openAppInfo(item.appInfo.packageName) },
+                                            onUninstall = { viewModel.uninstallApp(item.appInfo.packageName) },
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    }
                 }
             }
 
-            // App list or grid
-            if (uiState.isLoading) {
-                Box(
-                    contentAlignment = Alignment.Center,
-                    modifier = Modifier
-                        .weight(1f)
-                        .fillMaxWidth(),
-                ) {
-                    CircularProgressIndicator()
-                }
-            } else if (uiState.viewMode == "list") {
-                AppListView(
-                    apps = uiState.apps,
-                    onAppClick = { viewModel.launchApp(it.packageName) },
-                    onAppLongClick = { /* handled by context menu */ },
-                    onCategoryChange = { pkg, cat -> viewModel.updateAppCategory(pkg, cat) },
-                    onAppInfo = { viewModel.openAppInfo(it) },
-                    onUninstall = { viewModel.uninstallApp(it) },
-                    modifier = Modifier.weight(1f),
-                )
-            } else {
-                AppGridView(
-                    apps = uiState.apps,
-                    onAppClick = { viewModel.launchApp(it.packageName) },
-                    onAppLongClick = { /* handled by context menu */ },
-                    onCategoryChange = { pkg, cat -> viewModel.updateAppCategory(pkg, cat) },
-                    onAppInfo = { viewModel.openAppInfo(it) },
-                    onUninstall = { viewModel.uninstallApp(it) },
-                    modifier = Modifier.weight(1f),
+            // Side alphabet bar
+            if (uiState.sections.isNotEmpty()) {
+                AlphabetSideBar(
+                    headers = uiState.sectionHeaders,
+                    allItems = buildGridItems(uiState.sections),
+                    onHeaderSelected = { headerIndex ->
+                        coroutineScope.launch {
+                            gridState.animateScrollToItem(headerIndex)
+                        }
+                    },
                 )
             }
         }
     }
 }
 
-@OptIn(ExperimentalFoundationApi::class)
+// ===== Grid item model =====
+
+private sealed class GridItem {
+    data class Header(val title: String) : GridItem()
+    data class App(val appInfo: AppInfo) : GridItem()
+}
+
+private fun buildGridItems(sections: List<AppSection>): List<GridItem> {
+    val items = mutableListOf<GridItem>()
+    for (section in sections) {
+        items.add(GridItem.Header(section.header))
+        for (app in section.apps) {
+            items.add(GridItem.App(app))
+        }
+    }
+    return items
+}
+
+// ===== Section header =====
+
 @Composable
-private fun AppListView(
-    apps: List<AppInfo>,
-    onAppClick: (AppInfo) -> Unit,
-    onAppLongClick: (AppInfo) -> Unit,
-    onCategoryChange: (String, AppCategory) -> Unit,
-    onAppInfo: (String) -> Unit,
-    onUninstall: (String) -> Unit,
-    modifier: Modifier = Modifier,
+private fun SectionHeader(title: String) {
+    Text(
+        text = title,
+        style = MaterialTheme.typography.titleMedium,
+        fontWeight = FontWeight.Bold,
+        color = MaterialTheme.colorScheme.primary,
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(top = 12.dp, bottom = 4.dp, start = 4.dp),
+    )
+}
+
+// ===== Side alphabet bar =====
+
+@Composable
+private fun AlphabetSideBar(
+    headers: List<String>,
+    allItems: List<GridItem>,
+    onHeaderSelected: (Int) -> Unit,
 ) {
-    LazyColumn(
-        modifier = modifier.padding(horizontal = 8.dp),
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center,
+        modifier = Modifier
+            .fillMaxHeight()
+            .width(24.dp)
+            .padding(vertical = 48.dp),
     ) {
-        items(
-            items = apps,
-            key = { it.packageName },
-        ) { app ->
-            AppListItem(
-                app = app,
-                onClick = { onAppClick(app) },
-                onCategoryChange = { onCategoryChange(app.packageName, it) },
-                onAppInfo = { onAppInfo(app.packageName) },
-                onUninstall = { onUninstall(app.packageName) },
+        headers.forEach { header ->
+            val gridIndex = allItems.indexOfFirst {
+                it is GridItem.Header && it.title == header
+            }
+            Text(
+                text = header,
+                fontSize = if (headers.size > 20) 9.sp else 11.sp,
+                fontWeight = FontWeight.Medium,
+                color = MaterialTheme.colorScheme.primary,
+                textAlign = TextAlign.Center,
+                modifier = Modifier
+                    .clickable {
+                        if (gridIndex >= 0) onHeaderSelected(gridIndex)
+                    }
+                    .padding(vertical = 1.dp),
             )
         }
     }
 }
 
+// ===== Drawer app icon with long-press menu =====
+
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
-private fun AppListItem(
+private fun DrawerAppIcon(
     app: AppInfo,
-    onClick: () -> Unit,
+    onAppClick: () -> Unit,
     onCategoryChange: (AppCategory) -> Unit,
     onAppInfo: () -> Unit,
     onUninstall: () -> Unit,
@@ -200,53 +262,14 @@ private fun AppListItem(
     var showCategoryPicker by remember { mutableStateOf(false) }
     var showUninstallConfirm by remember { mutableStateOf(false) }
 
-    // Uninstall confirmation dialog
-    if (showUninstallConfirm) {
-        AlertDialog(
-            onDismissRequest = { showUninstallConfirm = false },
-            title = { Text(stringResource(R.string.confirm_uninstall_title)) },
-            text = { Text(stringResource(R.string.confirm_uninstall_message, app.appName)) },
-            confirmButton = {
-                TextButton(onClick = {
-                    showUninstallConfirm = false
-                    onUninstall()
-                }) {
-                    Text(stringResource(R.string.confirm))
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { showUninstallConfirm = false }) {
-                    Text(stringResource(R.string.cancel))
-                }
-            },
-        )
-    }
-
     Box {
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            modifier = Modifier
-                .fillMaxWidth()
-                .combinedClickable(
-                    onClick = onClick,
-                    onLongClick = { showContextMenu = true },
-                )
-                .padding(horizontal = 16.dp, vertical = 8.dp),
-        ) {
-            AppIcon(
-                appName = app.appName,
-                icon = app.icon,
-                iconSize = IconSize.SMALL,
-                showLabel = false,
-                onClick = onClick,
-            )
-            Spacer(modifier = Modifier.width(16.dp))
-            Text(
-                text = app.appName,
-                style = MaterialTheme.typography.bodyLarge,
-                modifier = Modifier.weight(1f),
-            )
-        }
+        AppIcon(
+            appName = app.appName,
+            icon = app.icon,
+            iconSize = IconSize.MEDIUM,
+            onClick = onAppClick,
+            onLongClick = { showContextMenu = true },
+        )
 
         // Context menu
         DropdownMenu(
@@ -254,7 +277,7 @@ private fun AppListItem(
             onDismissRequest = { showContextMenu = false },
         ) {
             DropdownMenuItem(
-                text = { Text(stringResource(R.string.change_category)) },
+                text = { Text(stringResource(R.string.move_to_category)) },
                 onClick = {
                     showContextMenu = false
                     showCategoryPicker = true
@@ -282,8 +305,15 @@ private fun AppListItem(
             onDismissRequest = { showCategoryPicker = false },
         ) {
             AppCategory.entries.forEach { category ->
+                val isSelected = category == app.category
                 DropdownMenuItem(
-                    text = { Text("${category.icon} ${category.displayName}") },
+                    text = {
+                        Text(
+                            text = "${category.icon} ${category.displayName}" +
+                                if (isSelected) " ✓" else "",
+                            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
+                        )
+                    },
                     onClick = {
                         showCategoryPicker = false
                         onCategoryChange(category)
@@ -292,35 +322,26 @@ private fun AppListItem(
             }
         }
     }
-}
 
-@Composable
-private fun AppGridView(
-    apps: List<AppInfo>,
-    onAppClick: (AppInfo) -> Unit,
-    onAppLongClick: (AppInfo) -> Unit,
-    onCategoryChange: (String, AppCategory) -> Unit,
-    onAppInfo: (String) -> Unit,
-    onUninstall: (String) -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    LazyVerticalGrid(
-        columns = GridCells.Fixed(4),
-        horizontalArrangement = Arrangement.SpaceEvenly,
-        verticalArrangement = Arrangement.spacedBy(16.dp),
-        modifier = modifier.padding(horizontal = 16.dp, vertical = 8.dp),
-    ) {
-        items(
-            items = apps,
-            key = { it.packageName },
-        ) { app ->
-            AppIcon(
-                appName = app.appName,
-                icon = app.icon,
-                iconSize = IconSize.MEDIUM,
-                onClick = { onAppClick(app) },
-                onLongClick = { onAppLongClick(app) },
-            )
-        }
+    // Uninstall confirmation dialog
+    if (showUninstallConfirm) {
+        AlertDialog(
+            onDismissRequest = { showUninstallConfirm = false },
+            title = { Text(stringResource(R.string.confirm_uninstall_title)) },
+            text = { Text(stringResource(R.string.confirm_uninstall_message, app.appName)) },
+            confirmButton = {
+                TextButton(onClick = {
+                    showUninstallConfirm = false
+                    onUninstall()
+                }) {
+                    Text(stringResource(R.string.confirm))
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showUninstallConfirm = false }) {
+                    Text(stringResource(R.string.cancel))
+                }
+            },
+        )
     }
 }

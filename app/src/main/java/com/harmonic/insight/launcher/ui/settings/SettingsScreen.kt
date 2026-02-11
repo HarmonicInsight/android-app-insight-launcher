@@ -104,30 +104,6 @@ fun SettingsScreen(
             // Display section
             SettingsSectionHeader(stringResource(R.string.settings_display))
 
-            // Drawer view mode
-            SettingsItem(
-                title = stringResource(R.string.settings_drawer_view),
-                subtitle = if (uiState.viewMode == "list") {
-                    stringResource(R.string.settings_view_list)
-                } else {
-                    stringResource(R.string.settings_view_grid)
-                },
-            ) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    RadioButton(
-                        selected = uiState.viewMode == "list",
-                        onClick = { viewModel.setViewMode("list") },
-                    )
-                    Text(stringResource(R.string.settings_view_list))
-                    Spacer(modifier = Modifier.width(16.dp))
-                    RadioButton(
-                        selected = uiState.viewMode == "grid",
-                        onClick = { viewModel.setViewMode("grid") },
-                    )
-                    Text(stringResource(R.string.settings_view_grid))
-                }
-            }
-
             // Icon size
             SettingsItem(
                 title = stringResource(R.string.settings_icon_size),

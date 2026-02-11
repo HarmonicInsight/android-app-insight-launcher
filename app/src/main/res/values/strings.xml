@@ -18,7 +18,7 @@
 
     <!-- Onboarding -->
     <string name="onboarding_title">アプリを自動分類しました</string>
-    <string name="onboarding_message">Insight Launcher がインストール済みのアプリを自動でカテゴリ分類しました。ホーム画面を上スワイプしてカテゴリ別一覧を確認できます。</string>
+    <string name="onboarding_message">Insight Launcher がインストール済みのアプリを自動でカテゴリ分類しました。\n\n・左右スワイプ: カテゴリ別に閲覧\n・上スワイプ: 全アプリ一覧（A-Z順）\n・長押し: カテゴリ変更・アンインストール</string>
     <string name="onboarding_ok">OK</string>
 
     <!-- Settings -->

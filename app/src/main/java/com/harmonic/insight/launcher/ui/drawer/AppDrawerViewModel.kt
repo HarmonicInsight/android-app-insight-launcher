@@ -8,24 +8,26 @@ import com.harmonic.insight.launcher.R
 import com.harmonic.insight.launcher.data.model.AppCategory
 import com.harmonic.insight.launcher.data.model.AppInfo
 import com.harmonic.insight.launcher.data.repository.AppRepository
-import com.harmonic.insight.launcher.data.repository.CategoryRepository
 import com.harmonic.insight.launcher.domain.usecase.LaunchAppUseCase
 import com.harmonic.insight.launcher.util.PackageUtils
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
+data class AppSection(
+    val header: String,
+    val apps: List<AppInfo>,
+)
+
 data class AppDrawerUiState(
-    val categories: List<AppCategory> = emptyList(),
-    val selectedCategory: AppCategory = AppCategory.COMMUNICATION,
-    val apps: List<AppInfo> = emptyList(),
+    val sections: List<AppSection> = emptyList(),
+    val sectionHeaders: List<String> = emptyList(),
     val searchQuery: String = "",
-    val viewMode: String = "list", // "list" or "grid"
     val isLoading: Boolean = true,
 )
 
@@ -33,26 +35,19 @@ data class AppDrawerUiState(
 class AppDrawerViewModel @Inject constructor(
     @ApplicationContext private val context: Context,
     private val appRepository: AppRepository,
-    private val categoryRepository: CategoryRepository,
     private val launchAppUseCase: LaunchAppUseCase,
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(AppDrawerUiState())
     val uiState: StateFlow<AppDrawerUiState> = _uiState.asStateFlow()
 
+    private var collectJob: Job? = null
+
     init {
         viewModelScope.launch {
-            val viewMode = categoryRepository.getDrawerViewMode()
-            _uiState.value = _uiState.value.copy(viewMode = viewMode)
-
             appRepository.refreshInstalledApps()
-            loadAvailableCategories()
+            loadAllApps()
         }
-    }
-
-    fun selectCategory(category: AppCategory) {
-        _uiState.value = _uiState.value.copy(selectedCategory = category)
-        loadAppsForCategory(category)
     }
 
     fun updateSearchQuery(query: String) {
@@ -60,15 +55,7 @@ class AppDrawerViewModel @Inject constructor(
         if (query.isNotBlank()) {
             searchApps(query)
         } else {
-            loadAppsForCategory(_uiState.value.selectedCategory)
-        }
-    }
-
-    fun toggleViewMode() {
-        val newMode = if (_uiState.value.viewMode == "list") "grid" else "list"
-        _uiState.value = _uiState.value.copy(viewMode = newMode)
-        viewModelScope.launch {
-            categoryRepository.setDrawerViewMode(newMode)
+            loadAllApps()
         }
     }
 
@@ -84,7 +71,6 @@ class AppDrawerViewModel @Inject constructor(
     fun updateAppCategory(packageName: String, newCategory: AppCategory) {
         viewModelScope.launch {
             appRepository.updateAppCategory(packageName, newCategory)
-            loadAvailableCategories()
         }
     }
 
@@ -96,46 +82,90 @@ class AppDrawerViewModel @Inject constructor(
         PackageUtils.uninstallApp(context, packageName)
     }
 
-    private suspend fun loadAvailableCategories() {
-        val allApps = appRepository.getAllApps().first()
-        // トップレベルカテゴリでグループ化
-        val usedTopLevel = allApps.map { AppCategory.topLevelOf(it.category) }.toSet()
-        val categoryOrder = categoryRepository.getCategoryOrder()
-            .filter { AppCategory.isTopLevel(it) }
-        val availableCategories = categoryOrder.filter { it in usedTopLevel }
-
-        val selectedCategory = if (_uiState.value.selectedCategory in availableCategories) {
-            _uiState.value.selectedCategory
-        } else {
-            availableCategories.firstOrNull() ?: AppCategory.OTHER
-        }
-
-        _uiState.value = _uiState.value.copy(
-            categories = availableCategories,
-            selectedCategory = selectedCategory,
-            isLoading = false,
-        )
-        loadAppsForCategory(selectedCategory)
-    }
-
-    /**
-     * トップレベルカテゴリを選択した場合、そのサブカテゴリのアプリも含めて表示
-     */
-    private fun loadAppsForCategory(category: AppCategory) {
-        viewModelScope.launch {
+    private fun loadAllApps() {
+        collectJob?.cancel()
+        collectJob = viewModelScope.launch {
             appRepository.getAllAppsWithIcons().collect { allApps ->
-                val filtered = allApps.filter {
-                    AppCategory.topLevelOf(it.category) == category
-                }
-                _uiState.value = _uiState.value.copy(apps = filtered)
+                val sorted = allApps.sortedBy { it.appName.lowercase() }
+                val sections = groupIntoSections(sorted)
+                _uiState.value = _uiState.value.copy(
+                    sections = sections,
+                    sectionHeaders = sections.map { it.header },
+                    isLoading = false,
+                )
             }
         }
     }
 
     private fun searchApps(query: String) {
-        viewModelScope.launch {
+        collectJob?.cancel()
+        collectJob = viewModelScope.launch {
             appRepository.searchAppsWithIcons(query).collect { apps ->
-                _uiState.value = _uiState.value.copy(apps = apps)
+                val sorted = apps.sortedBy { it.appName.lowercase() }
+                val sections = groupIntoSections(sorted)
+                _uiState.value = _uiState.value.copy(
+                    sections = sections,
+                    sectionHeaders = sections.map { it.header },
+                )
+            }
+        }
+    }
+
+    companion object {
+        /**
+         * Group apps into alphabetical sections.
+         * - Katakana/Hiragana → 五十音 row header (ア, カ, サ, タ, ナ, ハ, マ, ヤ, ラ, ワ)
+         * - Latin → uppercase letter (A-Z)
+         * - Digit → "#"
+         * - Other (kanji etc.) → "他"
+         */
+        fun groupIntoSections(apps: List<AppInfo>): List<AppSection> {
+            val grouped = linkedMapOf<String, MutableList<AppInfo>>()
+            for (app in apps) {
+                val header = sectionHeaderFor(app.appName)
+                grouped.getOrPut(header) { mutableListOf() }.add(app)
+            }
+            return grouped.map { (header, appList) -> AppSection(header, appList) }
+        }
+
+        fun sectionHeaderFor(name: String): String {
+            if (name.isBlank()) return "#"
+            val first = name.first()
+            return when {
+                first.isDigit() -> "#"
+                first in 'A'..'Z' || first in 'a'..'z' -> first.uppercaseChar().toString()
+                first.isKana() -> kanaRow(first)
+                else -> "他"
+            }
+        }
+
+        private fun Char.isKana(): Boolean {
+            return this in '\u3040'..'\u309F' || // Hiragana
+                this in '\u30A0'..'\u30FF'       // Katakana
+        }
+
+        /**
+         * Map a kana character to its 五十音 row header (Katakana).
+         */
+        private fun kanaRow(ch: Char): String {
+            // Normalize to Katakana
+            val katakana = if (ch in '\u3040'..'\u309F') {
+                ch + 0x60 // Hiragana → Katakana
+            } else {
+                ch
+            }
+            return when (katakana) {
+                in 'ア'..'オ' -> "ア"
+                in 'カ'..'ゴ' -> "カ"
+                in 'サ'..'ゾ' -> "サ"
+                in 'タ'..'ド' -> "タ"
+                in 'ナ'..'ノ' -> "ナ"
+                in 'ハ'..'ポ' -> "ハ"
+                in 'マ'..'モ' -> "マ"
+                in 'ヤ'..'ヨ' -> "ヤ"
+                in 'ラ'..'ロ' -> "ラ"
+                in 'ワ'..'ン' -> "ワ"
+                else -> "他"
             }
         }
     }
