@@ -49,4 +49,14 @@
     <string name="confirm">Confirm</string>
     <string name="reclassify_complete">Re-classification complete</string>
     <string name="launch_failed">Failed to launch app</string>
+
+    <!-- Dock -->
+    <string name="dock_replace_title">Change dock app</string>
+    <string name="dock_replace_message">You can set a different app in this dock slot.</string>
+    <string name="dock_remove">Remove from dock</string>
+    <string name="dock_select_app">Select app</string>
+
+    <!-- Category change -->
+    <string name="move_to_category">Move to category</string>
+    <string name="category_changed">Category changed</string>
 </resources>

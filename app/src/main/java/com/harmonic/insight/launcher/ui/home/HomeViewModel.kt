@@ -37,6 +37,7 @@ data class HomeUiState(
     /** トップレベルカテゴリ → サブカテゴリグループのリスト */
     val groupedApps: Map<AppCategory, List<SubCategoryGroup>> = emptyMap(),
     val dockApps: List<AppInfo> = emptyList(),
+    val allApps: List<AppInfo> = emptyList(),
     val isLoading: Boolean = true,
     val showOnboarding: Boolean = false,
 )
@@ -55,19 +56,16 @@ class HomeViewModel @Inject constructor(
     private val packageManager: PackageManager = context.packageManager
 
     init {
-        // One-time initialization
         viewModelScope.launch {
             appRepository.refreshInstalledApps()
             setupInitialDock()
             checkOnboarding()
         }
 
-        // Long-running: observe categorized apps reactively
         viewModelScope.launch {
             loadCategorizedApps()
         }
 
-        // Long-running: observe dock apps reactively
         viewModelScope.launch {
             categoryRepository.getDockApps().collect { dock ->
                 val dockApps = withContext(Dispatchers.IO) {
@@ -87,6 +85,38 @@ class HomeViewModel @Inject constructor(
         }
     }
 
+    fun updateAppCategory(packageName: String, newCategory: AppCategory) {
+        viewModelScope.launch {
+            appRepository.updateAppCategory(packageName, newCategory)
+            Toast.makeText(context, R.string.category_changed, Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    fun openAppInfo(packageName: String) {
+        PackageUtils.openAppInfo(context, packageName)
+    }
+
+    fun uninstallApp(packageName: String) {
+        PackageUtils.uninstallApp(context, packageName)
+    }
+
+    fun replaceDockApp(position: Int, packageName: String) {
+        viewModelScope.launch {
+            val currentDock = categoryRepository.getDockApps().first().toMutableList()
+            currentDock.removeAll { it.position == position }
+            currentDock.add(DockEntity(position, packageName))
+            categoryRepository.setDockApps(currentDock.sortedBy { it.position })
+        }
+    }
+
+    fun removeDockApp(position: Int) {
+        viewModelScope.launch {
+            val currentDock = categoryRepository.getDockApps().first().toMutableList()
+            currentDock.removeAll { it.position == position }
+            categoryRepository.setDockApps(currentDock)
+        }
+    }
+
     fun dismissOnboarding() {
         viewModelScope.launch {
             categoryRepository.setOnboardingCompleted()
@@ -96,29 +126,24 @@ class HomeViewModel @Inject constructor(
 
     private suspend fun loadCategorizedApps() {
         appRepository.getAllAppsWithIcons().collect { allApps ->
-            // アプリをトップレベルカテゴリでグループ化
             val byTopLevel = allApps.groupBy { AppCategory.topLevelOf(it.category) }
 
             val categoryOrder = categoryRepository.getCategoryOrder()
                 .filter { AppCategory.isTopLevel(it) }
             val availableCategories = categoryOrder.filter { it in byTopLevel.keys }
 
-            // 各トップレベルカテゴリ内をサブカテゴリでさらにグループ化
             val groupedApps = availableCategories.associateWith { topLevel ->
                 val appsInCategory = byTopLevel[topLevel] ?: emptyList()
                 val subCategories = AppCategory.HIERARCHY[topLevel]
 
                 if (subCategories != null && subCategories.isNotEmpty()) {
-                    // サブカテゴリがある場合：サブカテゴリごとにグループ化
                     val subGroups = mutableListOf<SubCategoryGroup>()
 
-                    // 親カテゴリ直属のアプリ（サブカテゴリ未割り当て）
                     val directApps = appsInCategory.filter { it.category == topLevel }
                     if (directApps.isNotEmpty()) {
                         subGroups.add(SubCategoryGroup(subCategory = null, apps = directApps))
                     }
 
-                    // 各サブカテゴリのアプリ
                     for (sub in subCategories) {
                         val subApps = appsInCategory.filter { it.category == sub }
                         if (subApps.isNotEmpty()) {
@@ -128,7 +153,6 @@ class HomeViewModel @Inject constructor(
 
                     subGroups
                 } else {
-                    // サブカテゴリなし：フラットにリスト
                     listOf(SubCategoryGroup(subCategory = null, apps = appsInCategory))
                 }
             }
@@ -136,6 +160,7 @@ class HomeViewModel @Inject constructor(
             _uiState.value = _uiState.value.copy(
                 topLevelCategories = availableCategories,
                 groupedApps = groupedApps,
+                allApps = allApps,
                 isLoading = false,
             )
         }

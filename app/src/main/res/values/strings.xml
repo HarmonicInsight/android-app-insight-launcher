@@ -49,4 +49,14 @@
     <string name="confirm">実行</string>
     <string name="reclassify_complete">再分類が完了しました</string>
     <string name="launch_failed">アプリの起動に失敗しました</string>
+
+    <!-- Dock -->
+    <string name="dock_replace_title">ドックアプリの変更</string>
+    <string name="dock_replace_message">このドック枠に別のアプリを設定できます。</string>
+    <string name="dock_remove">ドックから削除</string>
+    <string name="dock_select_app">アプリを選択</string>
+
+    <!-- Category change -->
+    <string name="move_to_category">カテゴリを移動</string>
+    <string name="category_changed">カテゴリを変更しました</string>
 </resources>
