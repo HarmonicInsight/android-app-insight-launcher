@@ -27,28 +27,15 @@ jobs:
       - name: Generate Gradle Wrapper
         run: gradle wrapper --gradle-version 8.11.1
 
-      - name: Build Debug APK
+      - name: Build APK
         run: ./gradlew assembleDebug
 
-      - name: Show Debug APK size
+      - name: Show APK size
         run: ls -lh app/build/outputs/apk/debug/*.apk
 
-      - name: Upload Debug APK
+      - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: insight-launcher-debug
+          name: insight-launcher
           path: app/build/outputs/apk/debug/*.apk
-          retention-days: 90
-
-      - name: Build Release APK (unsigned)
-        run: ./gradlew assembleRelease
-
-      - name: Show Release APK size
-        run: ls -lh app/build/outputs/apk/release/*.apk
-
-      - name: Upload Release APK
-        uses: actions/upload-artifact@v4
-        with:
-          name: insight-launcher-release-unsigned
-          path: app/build/outputs/apk/release/*.apk
           retention-days: 90
