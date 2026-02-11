@@ -1,5 +1,6 @@
 package com.harmonic.insight.launcher.ui.home
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -13,10 +14,12 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.AlertDialog
@@ -33,9 +36,12 @@ import androidx.compose.runtime.rememberCoroutineScope
 import kotlinx.coroutines.launch
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.harmonic.insight.launcher.R
 import com.harmonic.insight.launcher.ui.components.AppIcon
@@ -95,8 +101,8 @@ fun HomeScreen(
                 ) {
                     CircularProgressIndicator(color = Color.White)
                 }
-            } else if (uiState.categories.isNotEmpty()) {
-                // Category pages
+            } else if (uiState.topLevelCategories.isNotEmpty()) {
+                // Category pages with sub-category grouping
                 CategoryPager(
                     uiState = uiState,
                     onLaunchApp = { viewModel.launchApp(it) },
@@ -168,7 +174,7 @@ private fun CategoryPager(
     onLaunchApp: (String) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val categories = uiState.categories
+    val categories = uiState.topLevelCategories
     val pagerState = rememberPagerState(pageCount = { categories.size })
     val coroutineScope = rememberCoroutineScope()
 
@@ -195,28 +201,84 @@ private fun CategoryPager(
                 .weight(1f),
         ) { page ->
             val category = categories[page]
-            val apps = uiState.appsByCategory[category] ?: emptyList()
+            val groups = uiState.groupedApps[category] ?: emptyList()
 
-            LazyVerticalGrid(
-                columns = GridCells.Fixed(4),
-                horizontalArrangement = Arrangement.SpaceEvenly,
-                verticalArrangement = Arrangement.spacedBy(16.dp),
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(horizontal = 16.dp, vertical = 8.dp),
-            ) {
-                items(
-                    items = apps,
-                    key = { it.packageName },
-                ) { app ->
-                    AppIcon(
-                        appName = app.appName,
-                        icon = app.icon,
-                        iconSize = IconSize.MEDIUM,
-                        onClick = { onLaunchApp(app.packageName) },
+            CategoryPageContent(
+                groups = groups,
+                onLaunchApp = onLaunchApp,
+            )
+        }
+    }
+}
+
+/**
+ * カテゴリページの中身 - サブカテゴリごとにセクションヘッダー付きグリッド表示
+ */
+@Composable
+private fun CategoryPageContent(
+    groups: List<SubCategoryGroup>,
+    onLaunchApp: (String) -> Unit,
+) {
+    // サブカテゴリが1つだけなら（ヘッダー不要 = サブ分類なし）
+    val showHeaders = groups.size > 1 || (groups.size == 1 && groups[0].subCategory != null)
+
+    LazyVerticalGrid(
+        columns = GridCells.Fixed(4),
+        horizontalArrangement = Arrangement.SpaceEvenly,
+        verticalArrangement = Arrangement.spacedBy(12.dp),
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(horizontal = 16.dp, vertical = 8.dp),
+    ) {
+        for (group in groups) {
+            // サブカテゴリヘッダー
+            if (showHeaders && group.subCategory != null) {
+                item(
+                    span = { GridItemSpan(4) },
+                    key = "header_${group.subCategory.name}",
+                ) {
+                    SubCategoryHeader(
+                        icon = group.subCategory.icon,
+                        name = group.subCategory.displayName,
                     )
                 }
             }
+
+            // アプリアイコン
+            items(
+                items = group.apps,
+                key = { it.packageName },
+            ) { app ->
+                AppIcon(
+                    appName = app.appName,
+                    icon = app.icon,
+                    iconSize = IconSize.MEDIUM,
+                    onClick = { onLaunchApp(app.packageName) },
+                )
+            }
         }
+    }
+}
+
+@Composable
+private fun SubCategoryHeader(
+    icon: String,
+    name: String,
+) {
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(top = 8.dp, bottom = 4.dp)
+            .clip(RoundedCornerShape(8.dp))
+            .background(Color.White.copy(alpha = 0.15f))
+            .padding(horizontal = 12.dp, vertical = 6.dp),
+    ) {
+        Text(
+            text = "$icon $name",
+            color = Color.White,
+            fontSize = 13.sp,
+            fontWeight = FontWeight.Medium,
+        )
     }
 }

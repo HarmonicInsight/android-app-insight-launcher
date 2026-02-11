@@ -2,8 +2,10 @@ package com.harmonic.insight.launcher.ui.home
 
 import android.content.Context
 import android.content.pm.PackageManager
+import android.widget.Toast
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.harmonic.insight.launcher.R
 import com.harmonic.insight.launcher.data.local.entity.DockEntity
 import com.harmonic.insight.launcher.data.model.AppCategory
 import com.harmonic.insight.launcher.data.model.AppInfo
@@ -11,7 +13,6 @@ import com.harmonic.insight.launcher.data.repository.AppRepository
 import com.harmonic.insight.launcher.data.repository.CategoryRepository
 import com.harmonic.insight.launcher.domain.usecase.LaunchAppUseCase
 import com.harmonic.insight.launcher.util.PackageUtils
-import android.widget.Toast
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
@@ -23,9 +24,18 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import javax.inject.Inject
 
+/**
+ * サブカテゴリごとのアプリグループ
+ */
+data class SubCategoryGroup(
+    val subCategory: AppCategory?,
+    val apps: List<AppInfo>,
+)
+
 data class HomeUiState(
-    val categories: List<AppCategory> = emptyList(),
-    val appsByCategory: Map<AppCategory, List<AppInfo>> = emptyMap(),
+    val topLevelCategories: List<AppCategory> = emptyList(),
+    /** トップレベルカテゴリ → サブカテゴリグループのリスト */
+    val groupedApps: Map<AppCategory, List<SubCategoryGroup>> = emptyMap(),
     val dockApps: List<AppInfo> = emptyList(),
     val isLoading: Boolean = true,
     val showOnboarding: Boolean = false,
@@ -52,12 +62,12 @@ class HomeViewModel @Inject constructor(
             checkOnboarding()
         }
 
-        // Long-running: observe categorized apps reactively (separate coroutine)
+        // Long-running: observe categorized apps reactively
         viewModelScope.launch {
             loadCategorizedApps()
         }
 
-        // Long-running: observe dock apps reactively (separate coroutine)
+        // Long-running: observe dock apps reactively
         viewModelScope.launch {
             categoryRepository.getDockApps().collect { dock ->
                 val dockApps = withContext(Dispatchers.IO) {
@@ -72,11 +82,7 @@ class HomeViewModel @Inject constructor(
         viewModelScope.launch {
             val launched = launchAppUseCase(packageName)
             if (!launched) {
-                Toast.makeText(
-                    context,
-                    com.harmonic.insight.launcher.R.string.launch_failed,
-                    Toast.LENGTH_SHORT,
-                ).show()
+                Toast.makeText(context, R.string.launch_failed, Toast.LENGTH_SHORT).show()
             }
         }
     }
@@ -90,13 +96,46 @@ class HomeViewModel @Inject constructor(
 
     private suspend fun loadCategorizedApps() {
         appRepository.getAllAppsWithIcons().collect { allApps ->
-            val grouped = allApps.groupBy { it.category }
+            // アプリをトップレベルカテゴリでグループ化
+            val byTopLevel = allApps.groupBy { AppCategory.topLevelOf(it.category) }
+
             val categoryOrder = categoryRepository.getCategoryOrder()
-            val availableCategories = categoryOrder.filter { it in grouped.keys }
+                .filter { AppCategory.isTopLevel(it) }
+            val availableCategories = categoryOrder.filter { it in byTopLevel.keys }
+
+            // 各トップレベルカテゴリ内をサブカテゴリでさらにグループ化
+            val groupedApps = availableCategories.associateWith { topLevel ->
+                val appsInCategory = byTopLevel[topLevel] ?: emptyList()
+                val subCategories = AppCategory.HIERARCHY[topLevel]
+
+                if (subCategories != null && subCategories.isNotEmpty()) {
+                    // サブカテゴリがある場合：サブカテゴリごとにグループ化
+                    val subGroups = mutableListOf<SubCategoryGroup>()
+
+                    // 親カテゴリ直属のアプリ（サブカテゴリ未割り当て）
+                    val directApps = appsInCategory.filter { it.category == topLevel }
+                    if (directApps.isNotEmpty()) {
+                        subGroups.add(SubCategoryGroup(subCategory = null, apps = directApps))
+                    }
+
+                    // 各サブカテゴリのアプリ
+                    for (sub in subCategories) {
+                        val subApps = appsInCategory.filter { it.category == sub }
+                        if (subApps.isNotEmpty()) {
+                            subGroups.add(SubCategoryGroup(subCategory = sub, apps = subApps))
+                        }
+                    }
+
+                    subGroups
+                } else {
+                    // サブカテゴリなし：フラットにリスト
+                    listOf(SubCategoryGroup(subCategory = null, apps = appsInCategory))
+                }
+            }
 
             _uiState.value = _uiState.value.copy(
-                categories = availableCategories,
-                appsByCategory = grouped,
+                topLevelCategories = availableCategories,
+                groupedApps = groupedApps,
                 isLoading = false,
             )
         }

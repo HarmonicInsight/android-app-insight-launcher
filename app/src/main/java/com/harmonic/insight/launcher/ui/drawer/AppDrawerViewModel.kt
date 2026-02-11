@@ -45,10 +45,7 @@ class AppDrawerViewModel @Inject constructor(
             val viewMode = categoryRepository.getDrawerViewMode()
             _uiState.value = _uiState.value.copy(viewMode = viewMode)
 
-            // Ensure apps are populated in the database before loading categories
             appRepository.refreshInstalledApps()
-
-            // Now load categories (DB is guaranteed to be populated)
             loadAvailableCategories()
         }
     }
@@ -101,9 +98,11 @@ class AppDrawerViewModel @Inject constructor(
 
     private suspend fun loadAvailableCategories() {
         val allApps = appRepository.getAllApps().first()
-        val usedCategories = allApps.map { it.category }.toSet()
+        // トップレベルカテゴリでグループ化
+        val usedTopLevel = allApps.map { AppCategory.topLevelOf(it.category) }.toSet()
         val categoryOrder = categoryRepository.getCategoryOrder()
-        val availableCategories = categoryOrder.filter { it in usedCategories }
+            .filter { AppCategory.isTopLevel(it) }
+        val availableCategories = categoryOrder.filter { it in usedTopLevel }
 
         val selectedCategory = if (_uiState.value.selectedCategory in availableCategories) {
             _uiState.value.selectedCategory
@@ -119,10 +118,16 @@ class AppDrawerViewModel @Inject constructor(
         loadAppsForCategory(selectedCategory)
     }
 
+    /**
+     * トップレベルカテゴリを選択した場合、そのサブカテゴリのアプリも含めて表示
+     */
     private fun loadAppsForCategory(category: AppCategory) {
         viewModelScope.launch {
-            appRepository.getAppsByCategoryWithIcons(category).collect { apps ->
-                _uiState.value = _uiState.value.copy(apps = apps)
+            appRepository.getAllAppsWithIcons().collect { allApps ->
+                val filtered = allApps.filter {
+                    AppCategory.topLevelOf(it.category) == category
+                }
+                _uiState.value = _uiState.value.copy(apps = filtered)
             }
         }
     }
