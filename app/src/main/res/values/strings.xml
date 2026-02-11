@@ -59,4 +59,20 @@
     <!-- Category change -->
     <string name="move_to_category">カテゴリを移動</string>
     <string name="category_changed">カテゴリを変更しました</string>
+
+    <!-- Folders -->
+    <string name="folder_create">フォルダーを作成</string>
+    <string name="folder_new_name">新しいフォルダー</string>
+    <string name="folder_name_hint">フォルダー名</string>
+    <string name="folder_rename">名前を変更</string>
+    <string name="folder_delete">フォルダーを削除</string>
+    <string name="folder_delete_confirm_title">フォルダーを削除</string>
+    <string name="folder_delete_confirm_message">「%s」フォルダーを削除しますか？中のアプリは削除されません。</string>
+    <string name="folder_app_added">フォルダーに追加しました</string>
+    <string name="folder_remove_app">フォルダーから削除</string>
+    <string name="folder_empty">フォルダーが空です</string>
+    <string name="folder_drop_hint">ここにドロップ</string>
+    <string name="create">作成</string>
+    <string name="save">保存</string>
+    <string name="add_to_folder">フォルダーに追加</string>
 </resources>

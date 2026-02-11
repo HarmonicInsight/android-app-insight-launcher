@@ -1,0 +1,44 @@
+package com.harmonic.insight.launcher.data.local
+
+import androidx.room.Dao
+import androidx.room.Insert
+import androidx.room.OnConflictStrategy
+import androidx.room.Query
+import androidx.room.Transaction
+import com.harmonic.insight.launcher.data.local.entity.FolderAppEntity
+import com.harmonic.insight.launcher.data.local.entity.FolderEntity
+import kotlinx.coroutines.flow.Flow
+
+@Dao
+interface FolderDao {
+
+    @Query("SELECT * FROM folders ORDER BY position ASC")
+    fun getAllFolders(): Flow<List<FolderEntity>>
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertFolder(folder: FolderEntity): Long
+
+    @Query("UPDATE folders SET name = :name WHERE id = :folderId")
+    suspend fun renameFolder(folderId: Long, name: String)
+
+    @Query("DELETE FROM folders WHERE id = :folderId")
+    suspend fun deleteFolder(folderId: Long)
+
+    @Query("SELECT * FROM folder_apps WHERE folderId = :folderId ORDER BY position ASC")
+    fun getFolderApps(folderId: Long): Flow<List<FolderAppEntity>>
+
+    @Query("SELECT * FROM folder_apps ORDER BY position ASC")
+    fun getAllFolderApps(): Flow<List<FolderAppEntity>>
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertFolderApp(folderApp: FolderAppEntity)
+
+    @Query("DELETE FROM folder_apps WHERE folderId = :folderId AND packageName = :packageName")
+    suspend fun removeFolderApp(folderId: Long, packageName: String)
+
+    @Query("SELECT COUNT(*) FROM folder_apps WHERE folderId = :folderId")
+    suspend fun getFolderAppCount(folderId: Long): Int
+
+    @Query("SELECT MAX(position) FROM folders")
+    suspend fun getMaxFolderPosition(): Int?
+}
