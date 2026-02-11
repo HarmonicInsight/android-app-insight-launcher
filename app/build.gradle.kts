@@ -14,7 +14,7 @@ val syncLauncherAssets by tasks.registering(Exec::class) {
     val syncScript = rootProject.file("insight-common/scripts/sync-launcher-assets.sh")
     val targetDir = layout.projectDirectory.dir("src/main/assets/launcher").asFile.absolutePath
 
-    commandLine("bash", syncScript.absolutePath, "--verify", targetDir)
+    commandLine("bash", syncScript.absolutePath, "--pull", "--verify", targetDir)
     workingDir(rootProject.projectDir)
 
     // Track inputs so Gradle knows when to re-run
