@@ -6,6 +6,26 @@ plugins {
     alias(libs.plugins.hilt)
 }
 
+// ---------------------------------------------------------------------------
+// Sync branded launcher icons from insight-common submodule → app assets
+// ---------------------------------------------------------------------------
+val syncLauncherAssets by tasks.registering(Sync::class) {
+    val submoduleDir = rootProject.file("insight-common/brand/icons/generated/launcher")
+    from(submoduleDir) {
+        include("*/mipmap-*/ic_launcher.png")
+        include("launcher-manifest.json")
+    }
+    into(layout.projectDirectory.dir("src/main/assets/launcher"))
+    // Only run when source files actually changed
+    inputs.dir(submoduleDir)
+}
+
+tasks.configureEach {
+    if (name.startsWith("pre") && name.endsWith("Build")) {
+        dependsOn(syncLauncherAssets)
+    }
+}
+
 android {
     namespace = "com.harmonic.insight.launcher"
     compileSdk = 35
