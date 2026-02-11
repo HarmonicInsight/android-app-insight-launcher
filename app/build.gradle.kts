@@ -8,16 +8,21 @@ plugins {
 
 // ---------------------------------------------------------------------------
 // Sync branded launcher icons from insight-common submodule → app assets
+// Uses the official sync script from insight-common with hash-based skip.
 // ---------------------------------------------------------------------------
-val syncLauncherAssets by tasks.registering(Sync::class) {
-    val submoduleDir = rootProject.file("insight-common/brand/icons/generated/launcher")
-    from(submoduleDir) {
-        include("*/mipmap-*/ic_launcher.png")
-        include("launcher-manifest.json")
-    }
-    into(layout.projectDirectory.dir("src/main/assets/launcher"))
-    // Only run when source files actually changed
-    inputs.dir(submoduleDir)
+val syncLauncherAssets by tasks.registering(Exec::class) {
+    val syncScript = rootProject.file("insight-common/scripts/sync-launcher-assets.sh")
+    val targetDir = layout.projectDirectory.dir("src/main/assets/launcher").asFile.absolutePath
+
+    commandLine("bash", syncScript.absolutePath, "--verify", targetDir)
+    workingDir(rootProject.projectDir)
+
+    // Track inputs so Gradle knows when to re-run
+    inputs.dir(rootProject.file("insight-common/brand/icons/generated/launcher"))
+    outputs.dir(layout.projectDirectory.dir("src/main/assets/launcher"))
+
+    // Don't fail the build if the submodule isn't initialized
+    isIgnoreExitValue = true
 }
 
 tasks.configureEach {
