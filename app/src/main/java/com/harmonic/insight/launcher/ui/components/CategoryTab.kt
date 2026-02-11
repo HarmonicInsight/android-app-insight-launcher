@@ -7,6 +7,7 @@ import androidx.compose.material3.Tab
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import com.harmonic.insight.launcher.data.model.AppCategory
 
@@ -16,6 +17,8 @@ fun CategoryTabRow(
     selectedCategory: AppCategory,
     onCategorySelected: (AppCategory) -> Unit,
     modifier: Modifier = Modifier,
+    containerColor: Color = MaterialTheme.colorScheme.surface.copy(alpha = 0.9f),
+    contentColor: Color = MaterialTheme.colorScheme.onSurface,
 ) {
     if (categories.isEmpty()) return
 
@@ -24,8 +27,8 @@ fun CategoryTabRow(
     ScrollableTabRow(
         selectedTabIndex = selectedIndex,
         edgePadding = 16.dp,
-        containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.9f),
-        contentColor = MaterialTheme.colorScheme.onSurface,
+        containerColor = containerColor,
+        contentColor = contentColor,
         modifier = modifier,
     ) {
         categories.forEachIndexed { index, category ->

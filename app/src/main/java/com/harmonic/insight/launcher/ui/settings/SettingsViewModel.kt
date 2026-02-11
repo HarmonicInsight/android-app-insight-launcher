@@ -12,7 +12,6 @@ import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 data class SettingsUiState(
-    val viewMode: String = "list",
     val iconSize: String = "medium",
 )
 
@@ -27,19 +26,10 @@ class SettingsViewModel @Inject constructor(
 
     init {
         viewModelScope.launch {
-            val viewMode = categoryRepository.getDrawerViewMode()
             val iconSize = categoryRepository.getIconSize()
             _uiState.value = SettingsUiState(
-                viewMode = viewMode,
                 iconSize = iconSize,
             )
-        }
-    }
-
-    fun setViewMode(mode: String) {
-        _uiState.value = _uiState.value.copy(viewMode = mode)
-        viewModelScope.launch {
-            categoryRepository.setDrawerViewMode(mode)
         }
     }
 

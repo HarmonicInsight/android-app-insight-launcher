@@ -18,7 +18,7 @@
 
     <!-- Onboarding -->
     <string name="onboarding_title">Apps auto-categorized</string>
-    <string name="onboarding_message">Insight Launcher has automatically categorized your installed apps. Swipe up from the home screen to see the category view.</string>
+    <string name="onboarding_message">Insight Launcher has automatically categorized your installed apps.\n\n• Swipe left/right: Browse by category\n• Swipe up: All apps (A-Z)\n• Long press: Change category / Uninstall</string>
     <string name="onboarding_ok">OK</string>
 
     <!-- Settings -->

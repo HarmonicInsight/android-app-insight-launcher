@@ -507,6 +507,8 @@ private fun CategoryPager(
                     }
                 }
             },
+            containerColor = Color.Black.copy(alpha = 0.3f),
+            contentColor = Color.White,
         )
 
         HorizontalPager(
@@ -564,6 +566,7 @@ private fun CategoryPageContent(
                     appName = app.appName,
                     icon = app.icon,
                     iconSize = IconSize.MEDIUM,
+                    labelColor = Color.White,
                     onClick = { onLaunchApp(app.packageName) },
                     onLongClick = { onLongClickApp(app) },
                 )

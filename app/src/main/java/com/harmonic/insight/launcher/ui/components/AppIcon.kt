@@ -21,6 +21,9 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Shadow
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
@@ -40,6 +43,7 @@ fun AppIcon(
     icon: Drawable?,
     iconSize: IconSize = IconSize.MEDIUM,
     showLabel: Boolean = true,
+    labelColor: Color = Color.Unspecified,
     onClick: () -> Unit = {},
     onLongClick: () -> Unit = {},
     modifier: Modifier = Modifier,
@@ -82,10 +86,22 @@ fun AppIcon(
         }
 
         if (showLabel) {
+            val resolvedColor = if (labelColor != Color.Unspecified) labelColor else MaterialTheme.colorScheme.onSurface
+            val textStyle = if (labelColor == Color.White) {
+                MaterialTheme.typography.labelSmall.copy(
+                    shadow = Shadow(
+                        color = Color.Black.copy(alpha = 0.6f),
+                        offset = Offset(1f, 1f),
+                        blurRadius = 3f,
+                    ),
+                )
+            } else {
+                MaterialTheme.typography.labelSmall
+            }
             Text(
                 text = appName,
-                style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.onSurface,
+                style = textStyle,
+                color = resolvedColor,
                 textAlign = TextAlign.Center,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
