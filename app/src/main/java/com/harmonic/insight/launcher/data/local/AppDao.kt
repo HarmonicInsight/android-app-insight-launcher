@@ -11,10 +11,10 @@ import kotlinx.coroutines.flow.Flow
 
 @Dao
 interface AppDao {
-    @Query("SELECT * FROM apps ORDER BY appName ASC")
+    @Query("SELECT * FROM apps ORDER BY lastUsedTimestamp DESC, appName ASC")
     fun getAllApps(): Flow<List<AppEntity>>
 
-    @Query("SELECT * FROM apps WHERE category = :category ORDER BY appName ASC")
+    @Query("SELECT * FROM apps WHERE category = :category ORDER BY lastUsedTimestamp DESC, appName ASC")
     fun getAppsByCategory(category: AppCategory): Flow<List<AppEntity>>
 
     @Query("SELECT * FROM apps WHERE packageName = :packageName")
