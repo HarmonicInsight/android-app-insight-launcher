@@ -158,6 +158,6 @@ class IconSyncManager @Inject constructor(
          * Points to the main branch of insight-common.
          */
         private const val BASE_URL =
-            "https://raw.githubusercontent.com/HarmonicInsight/insight-common/main/brand/icons/generated/launcher"
+            "https://raw.githubusercontent.com/HarmonicInsight/cross-lib-insight-common/main/brand/icons/generated/launcher"
     }
 }
