@@ -46,6 +46,7 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
@@ -136,7 +137,15 @@ fun HomeScreen(
     } else null
     val isHoveringAddButton = isDragging && addButtonBounds.contains(dragInfo!!.currentPosition)
 
-    val iconSizePx = with(LocalDensity.current) { IconSize.MEDIUM.sizeDp.toPx() }
+    val density = LocalDensity.current
+    val iconSizePx = with(density) { IconSize.MEDIUM.sizeDp.toPx() }
+    val dragThresholdPx = with(density) { 20.dp.toPx() }
+
+    // Clean up stale folderBounds entries when folders change
+    LaunchedEffect(uiState.folders) {
+        val currentIds = uiState.folders.map { it.id }.toSet()
+        folderBounds.keys.removeAll { it !in currentIds }
+    }
 
     Box(
         modifier = Modifier
@@ -219,7 +228,6 @@ fun HomeScreen(
                 CategoryPager(
                     uiState = uiState,
                     onLaunchApp = { viewModel.launchApp(it) },
-                    onLongClickApp = { app -> contextMenuApp = app },
                     onDragStart = { app, position ->
                         dragInfo = DragInfo(app = app, currentPosition = position)
                     },
@@ -234,7 +242,7 @@ fun HomeScreen(
                     onDragEnd = {
                         val info = dragInfo
                         if (info != null) {
-                            if (info.totalDistance < 30f) {
+                            if (info.totalDistance < dragThresholdPx) {
                                 contextMenuApp = info.app
                             } else if (hoveredFolderId != null) {
                                 viewModel.addAppToFolder(hoveredFolderId, info.app.packageName)
@@ -665,7 +673,6 @@ private fun FolderChip(
 private fun CategoryPager(
     uiState: HomeUiState,
     onLaunchApp: (String) -> Unit,
-    onLongClickApp: (AppInfo) -> Unit,
     onDragStart: (AppInfo, Offset) -> Unit,
     onDragMove: (Offset) -> Unit,
     onDragEnd: () -> Unit,
@@ -704,7 +711,6 @@ private fun CategoryPager(
             CategoryPageContent(
                 groups = groups,
                 onLaunchApp = onLaunchApp,
-                onLongClickApp = onLongClickApp,
                 onDragStart = onDragStart,
                 onDragMove = onDragMove,
                 onDragEnd = onDragEnd,
@@ -718,7 +724,6 @@ private fun CategoryPager(
 private fun CategoryPageContent(
     groups: List<SubCategoryGroup>,
     onLaunchApp: (String) -> Unit,
-    onLongClickApp: (AppInfo) -> Unit,
     onDragStart: (AppInfo, Offset) -> Unit,
     onDragMove: (Offset) -> Unit,
     onDragEnd: () -> Unit,

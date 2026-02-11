@@ -41,4 +41,10 @@ interface FolderDao {
 
     @Query("SELECT MAX(position) FROM folders")
     suspend fun getMaxFolderPosition(): Int?
+
+    @Transaction
+    suspend fun addAppToFolderTransactional(folderId: Long, packageName: String) {
+        val count = getFolderAppCount(folderId)
+        insertFolderApp(FolderAppEntity(folderId, packageName, count))
+    }
 }
