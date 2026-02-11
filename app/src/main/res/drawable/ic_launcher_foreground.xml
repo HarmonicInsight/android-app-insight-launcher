@@ -4,14 +4,61 @@
     android:height="108dp"
     android:viewportWidth="108"
     android:viewportHeight="108">
-    <!-- Simple "I" letter icon for Insight -->
+
+    <!-- Gold circle background -->
+    <path
+        android:fillColor="#B8942F"
+        android:pathData="M54,54m-34,0a34,34 0,1 1,68 0a34,34 0,1 1,-68 0" />
+
+    <!-- 2x2 grid of rounded rectangles (app icons in a drawer) -->
+    <!-- Top-left rounded rect -->
     <path
         android:fillColor="#FFFFFF"
-        android:pathData="M48,28 L60,28 L60,80 L48,80 Z" />
+        android:pathData="M40,42 L50,42 Q52,42 52,44 L52,54 Q52,56 50,56 L40,56 Q38,56 38,54 L38,44 Q38,42 40,42 Z" />
+
+    <!-- Top-right rounded rect -->
     <path
         android:fillColor="#FFFFFF"
-        android:pathData="M42,28 L66,28 L66,36 L42,36 Z" />
+        android:pathData="M58,42 L68,42 Q70,42 70,44 L70,54 Q70,56 68,56 L58,56 Q56,56 56,54 L56,44 Q56,42 58,42 Z" />
+
+    <!-- Bottom-left rounded rect -->
     <path
         android:fillColor="#FFFFFF"
-        android:pathData="M42,72 L66,72 L66,80 L42,80 Z" />
+        android:pathData="M40,60 L50,60 Q52,60 52,62 L52,72 Q52,74 50,74 L40,74 Q38,74 38,72 L38,62 Q38,60 40,60 Z" />
+
+    <!-- Bottom-right rounded rect -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M58,60 L68,60 Q70,60 70,62 L70,72 Q70,74 68,74 L58,74 Q56,74 56,72 L56,62 Q56,60 58,60 Z" />
+
+    <!-- Small dots inside each rect for cute effect -->
+    <!-- Top-left dot -->
+    <path
+        android:fillColor="#B8942F"
+        android:fillAlpha="0.4"
+        android:pathData="M45,49m-2.5,0a2.5,2.5 0,1 1,5 0a2.5,2.5 0,1 1,-5 0" />
+
+    <!-- Top-right dot -->
+    <path
+        android:fillColor="#B8942F"
+        android:fillAlpha="0.4"
+        android:pathData="M63,49m-2.5,0a2.5,2.5 0,1 1,5 0a2.5,2.5 0,1 1,-5 0" />
+
+    <!-- Bottom-left dot -->
+    <path
+        android:fillColor="#B8942F"
+        android:fillAlpha="0.4"
+        android:pathData="M45,67m-2.5,0a2.5,2.5 0,1 1,5 0a2.5,2.5 0,1 1,-5 0" />
+
+    <!-- Bottom-right dot -->
+    <path
+        android:fillColor="#B8942F"
+        android:fillAlpha="0.4"
+        android:pathData="M63,67m-2.5,0a2.5,2.5 0,1 1,5 0a2.5,2.5 0,1 1,-5 0" />
+
+    <!-- Sparkle accent (4-pointed star) at top-right -->
+    <path
+        android:fillColor="#D4BC6A"
+        android:pathData="M76,30 L77.5,26 L79,30 L83,31.5 L79,33 L77.5,37 L76,33 L72,31.5 Z" />
+
 </vector>

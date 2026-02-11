@@ -10,34 +10,44 @@ import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.platform.LocalContext
 
-private val LightColorScheme = lightColorScheme(
-    primary = PrimaryLight,
-    onPrimary = OnPrimaryLight,
-    primaryContainer = PrimaryContainerLight,
-    onPrimaryContainer = OnPrimaryContainerLight,
-    secondary = SecondaryLight,
-    onSecondary = OnSecondaryLight,
-    secondaryContainer = SecondaryContainerLight,
-    onSecondaryContainer = OnSecondaryContainerLight,
-    background = BackgroundLight,
-    onBackground = OnBackgroundLight,
-    surface = SurfaceLight,
-    onSurface = OnSurfaceLight,
+private val InsightLightColorScheme = lightColorScheme(
+    primary = InsightPrimaryLight,
+    onPrimary = InsightOnPrimaryLight,
+    primaryContainer = InsightPrimaryContainerLight,
+    onPrimaryContainer = InsightOnPrimaryContainerLight,
+    secondary = InsightSecondaryLight,
+    onSecondary = InsightOnSecondaryLight,
+    secondaryContainer = InsightSecondaryContainerLight,
+    onSecondaryContainer = InsightOnSecondaryContainerLight,
+    background = InsightBackgroundLight,
+    onBackground = InsightOnBackgroundLight,
+    surface = InsightSurfaceLight,
+    onSurface = InsightOnSurfaceLight,
+    surfaceVariant = InsightSurfaceVariantLight,
+    onSurfaceVariant = InsightOnSurfaceVariantLight,
+    error = InsightErrorLight,
+    onError = InsightOnErrorLight,
+    outline = InsightOutlineLight,
 )
 
-private val DarkColorScheme = darkColorScheme(
-    primary = PrimaryDark,
-    onPrimary = OnPrimaryDark,
-    primaryContainer = PrimaryContainerDark,
-    onPrimaryContainer = OnPrimaryContainerDark,
-    secondary = SecondaryDark,
-    onSecondary = OnSecondaryDark,
-    secondaryContainer = SecondaryContainerDark,
-    onSecondaryContainer = OnSecondaryContainerDark,
-    background = BackgroundDark,
-    onBackground = OnBackgroundDark,
-    surface = SurfaceDark,
-    onSurface = OnSurfaceDark,
+private val InsightDarkColorScheme = darkColorScheme(
+    primary = InsightPrimaryDark,
+    onPrimary = InsightOnPrimaryDark,
+    primaryContainer = InsightPrimaryContainerDark,
+    onPrimaryContainer = InsightOnPrimaryContainerDark,
+    secondary = InsightSecondaryDark,
+    onSecondary = InsightOnSecondaryDark,
+    secondaryContainer = InsightSecondaryContainerDark,
+    onSecondaryContainer = InsightOnSecondaryContainerDark,
+    background = InsightBackgroundDark,
+    onBackground = InsightOnBackgroundDark,
+    surface = InsightSurfaceDark,
+    onSurface = InsightOnSurfaceDark,
+    surfaceVariant = InsightSurfaceVariantDark,
+    onSurfaceVariant = InsightOnSurfaceVariantDark,
+    error = InsightErrorDark,
+    onError = InsightOnErrorDark,
+    outline = InsightOutlineDark,
 )
 
 @Composable
@@ -51,8 +61,8 @@ fun InsightLauncherTheme(
             val context = LocalContext.current
             if (darkTheme) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
         }
-        darkTheme -> DarkColorScheme
-        else -> LightColorScheme
+        darkTheme -> InsightDarkColorScheme
+        else -> InsightLightColorScheme
     }
 
     MaterialTheme(
